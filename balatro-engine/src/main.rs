@@ -52,9 +52,9 @@ fn run_game_loop(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::E
         let game_state = engine.game_state();
         info!("Current game phase: {:?}", game_state.phase);
         info!("Ante: {}, Money: {}, Score: {}", 
-              game_state.ante.0, 
-              game_state.money.0, 
-              game_state.score.0);
+              game_state.ante, 
+              game_state.money, 
+              game_state.score);
         
         // For now, just break after one iteration
         // In the real implementation, this would handle user input and game logic

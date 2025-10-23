@@ -1,6 +1,7 @@
 //! Stakes system for Balatro game engine
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use crate::error::{GameError, GameResult};
 
 /// Different stake levels that modify game difficulty
@@ -50,7 +51,15 @@ pub struct Stake {
 
 impl Stake {
     /// Create a new stake with default modifiers
-    pub fn new(level: StakeLevel, name: String, description: String) -> Self {
+    pub fn new(level: StakeLevel) -> Self {
+        Self {
+            level,
+            name: level.to_string(),
+            description: level.to_string(),
+            modifiers: StakeModifiers::default(),
+        }
+    }
+    pub fn new_verbose(level: StakeLevel, name: String, description: String) -> Self {
         Self {
             level,
             name,
@@ -103,6 +112,21 @@ impl Stake {
     }
 }
 
+impl fmt::Display for StakeLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StakeLevel::White => write!(f, "White Stake"),
+            StakeLevel::Red => write!(f, "Red Stake"),
+            StakeLevel::Green => write!(f, "Green Stake"),
+            StakeLevel::Blue => write!(f, "Blue Stake"),
+            StakeLevel::Black => write!(f, "Black Stake"),
+            StakeLevel::Purple => write!(f, "Purple Stake"),
+            StakeLevel::Orange => write!(f, "Orange Stake"),
+            StakeLevel::Gold => write!(f, "Gold Stake"),
+        }
+    }
+}
+
 impl Default for StakeModifiers {
     fn default() -> Self {
         Self {
@@ -146,7 +170,7 @@ impl StakeManager {
     fn create_default_stakes() -> Vec<Stake> {
         vec![
             // White Stake - Base difficulty
-            Stake::new(
+            Stake::new_verbose(
                 StakeLevel::White,
                 "White Stake".to_string(),
                 "Base difficulty with no modifiers".to_string(),
@@ -300,11 +324,7 @@ mod tests {
 
     #[test]
     fn test_stake_creation() {
-        let stake = Stake::new(
-            StakeLevel::Red,
-            "Red Stake".to_string(),
-            "Test stake".to_string(),
-        );
+        let stake = Stake::new(StakeLevel::Red);
         
         assert_eq!(stake.level, StakeLevel::Red);
         assert_eq!(stake.name, "Red Stake");

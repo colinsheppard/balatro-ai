@@ -15,15 +15,11 @@ fn test_stake_level_ordering() {
 
 #[test]
 fn test_stake_creation() {
-    let stake = Stake::new(
-        StakeLevel::Red,
-        "Red Stake".to_string(),
-        "A challenging stake".to_string(),
-    );
+    let stake = Stake::new(StakeLevel::Red);
     
     assert_eq!(stake.level, StakeLevel::Red);
     assert_eq!(stake.name, "Red Stake");
-    assert_eq!(stake.description, "A challenging stake");
+    assert_eq!(stake.description, "Red Stake");
     assert_eq!(stake.modifiers.blind_score_multiplier, 1.0);
 }
 

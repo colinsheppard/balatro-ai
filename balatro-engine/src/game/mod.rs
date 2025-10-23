@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::card::Card;
 use crate::deck::{Deck, DeckType};
 use crate::joker::JokerInstance;
+use crate::stakes::{Stake, StakeLevel};
 use crate::blind::Blind;
 use crate::consumable::Consumable;
 use crate::error::{GameError, GameResult};
@@ -19,31 +20,18 @@ pub enum GamePhase {
     GameOver,
 }
 
-/// Current ante level
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Ante(pub u32);
-
-/// Current hand size
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct HandSize(pub usize);
-
-/// Player's money
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Money(pub i32);
-
-/// Player's score
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Score(pub i32);
+// Removed tuple structs - now using primitive types directly
 
 /// Main game state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     pub phase: GamePhase,
-    pub ante: Ante,
-    pub hand_size: HandSize,
-    pub money: Money,
-    pub score: Score,
+    pub ante: u32,
+    pub hand_size: usize,
+    pub money: i32,
+    pub score: i32,
     pub deck: Deck,
+    pub stake: Stake,
     pub jokers: Vec<JokerInstance>,
     pub hand: Vec<Card>,
     pub current_blind: Option<Blind>,
@@ -56,11 +44,12 @@ impl GameState {
     pub fn new() -> Self {
         Self {
             phase: GamePhase::Menu,
-            ante: Ante(1),
-            hand_size: HandSize(8),
-            money: Money(4),
-            score: Score(0),
+            ante: 1,
+            hand_size: 8,
+            money: 4,
+            score: 0,
             deck: Deck::new(DeckType::Red),
+            stake: Stake::new(StakeLevel::White),
             jokers: Vec::new(),
             hand: Vec::new(),
             current_blind: None,
@@ -72,13 +61,13 @@ impl GameState {
     /// Draw cards to fill the hand
     pub fn draw_hand(&mut self) -> GameResult<()> {
         self.hand.clear();
-        let cards = self.deck.draw_multiple(self.hand_size.0)?;
+        let cards = self.deck.draw_multiple(self.hand_size)?;
         self.hand = cards;
         Ok(())
     }
 
     /// Play a hand of cards
-    pub fn play_hand(&mut self, selected_cards: Vec<usize>) -> GameResult<Score> {
+    pub fn play_hand(&mut self, selected_cards: Vec<usize>) -> GameResult<i32> {
         if selected_cards.is_empty() {
             return Err(GameError::InvalidGameState("Cannot play empty hand".to_string()));
         }
@@ -99,7 +88,7 @@ impl GameState {
             self.hand.remove(i);
         }
 
-        Ok(Score(final_score))
+        Ok(final_score)
     }
 
     /// Calculate the score for a poker hand
@@ -133,7 +122,7 @@ impl GameState {
 
     /// Start a new ante
     pub fn start_new_ante(&mut self) -> GameResult<()> {
-        self.ante = Ante(self.ante.0 + 1);
+        self.ante += 1;
         self.phase = GamePhase::BlindSelect;
         Ok(())
     }

@@ -9,9 +9,9 @@ fn test_engine_creation_and_initialization() {
     let engine = BalatroEngine::new(12345);
     let game_state = engine.game_state();
     
-    assert_eq!(game_state.ante.0, 1);
-    assert_eq!(game_state.money.0, 4);
-    assert_eq!(game_state.hand_size.0, 8);
+    assert_eq!(game_state.ante, 1);
+    assert_eq!(game_state.money, 4);
+    assert_eq!(game_state.hand_size, 8);
 }
 
 #[test]
@@ -21,7 +21,7 @@ fn test_engine_start_new_run() {
     
     let game_state = engine.game_state();
     assert_eq!(game_state.phase, GamePhase::Menu);
-    assert_eq!(game_state.ante.0, 1);
+    assert_eq!(game_state.ante, 1);
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn test_full_game_cycle() {
     
     // Play a hand
     let score = game_state.play_hand(vec![0, 1, 2]).unwrap();
-    assert!(score.0 > 0);
+    assert!(score > 0);
     assert_eq!(game_state.hand.len(), 5);
     
     // End round
@@ -46,7 +46,7 @@ fn test_full_game_cycle() {
     
     // Start new ante
     game_state.start_new_ante().unwrap();
-    assert_eq!(game_state.ante.0, 2);
+    assert_eq!(game_state.ante, 2);
     assert_eq!(game_state.phase, GamePhase::BlindSelect);
 }
 
@@ -82,7 +82,7 @@ mult = 4
     let score = game_state.play_hand(vec![0, 1, 2]).unwrap();
     
     // Score should be affected by joker (even if just base values)
-    assert!(score.0 > 0);
+    assert!(score > 0);
 }
 
 #[test]
@@ -125,11 +125,11 @@ fn test_engine_state_persistence() {
     
     // Modify game state
     let mut game_state = engine.game_state_mut();
-    game_state.money = crate::game::Money(100);
-    game_state.ante = crate::game::Ante(3);
+    game_state.money = 100;
+    game_state.ante = 3;
     
     // Verify changes persist
     let game_state = engine.game_state();
-    assert_eq!(game_state.money.0, 100);
-    assert_eq!(game_state.ante.0, 3);
+    assert_eq!(game_state.money, 100);
+    assert_eq!(game_state.ante, 3);
 }
