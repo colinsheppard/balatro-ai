@@ -17,7 +17,7 @@ fn test_engine_creation_and_initialization() {
 #[test]
 fn test_engine_start_new_run() {
     let mut engine = BalatroEngine::new(12345);
-    engine.start_new_run().unwrap();
+    engine.start_new_default_run().unwrap();
     
     let game_state = engine.game_state();
     assert_eq!(game_state.phase, GamePhase::Menu);
@@ -27,7 +27,7 @@ fn test_engine_start_new_run() {
 #[test]
 fn test_full_game_cycle() {
     let mut engine = BalatroEngine::new(12345);
-    engine.start_new_run().unwrap();
+    engine.start_new_default_run().unwrap();
     
     let mut game_state = engine.game_state_mut();
     
@@ -53,7 +53,7 @@ fn test_full_game_cycle() {
 #[test]
 fn test_joker_interaction_with_game_state() {
     let mut engine = BalatroEngine::new(12345);
-    engine.start_new_run().unwrap();
+    engine.start_new_default_run().unwrap();
     
     let mut game_state = engine.game_state_mut();
     
@@ -88,7 +88,7 @@ mult = 4
 #[test]
 fn test_deck_interaction_with_game_state() {
     let mut engine = BalatroEngine::new(12345);
-    engine.start_new_run().unwrap();
+    engine.start_new_default_run().unwrap();
     
     let mut game_state = engine.game_state_mut();
     
@@ -104,7 +104,7 @@ fn test_deck_interaction_with_game_state() {
 #[test]
 fn test_multiple_rounds() {
     let mut engine = BalatroEngine::new(12345);
-    engine.start_new_run().unwrap();
+    engine.start_new_default_run().unwrap();
     
     let mut game_state = engine.game_state_mut();
     
@@ -121,7 +121,7 @@ fn test_multiple_rounds() {
 #[test]
 fn test_engine_state_persistence() {
     let mut engine = BalatroEngine::new(12345);
-    engine.start_new_run().unwrap();
+    engine.start_new_default_run().unwrap();
     
     // Modify game state
     let mut game_state = engine.game_state_mut();

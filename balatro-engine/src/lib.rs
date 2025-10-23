@@ -37,9 +37,15 @@ impl BalatroEngine {
         }
     }
 
-    /// Initialize a new game run
-    pub fn start_new_run(&mut self) -> Result<(), GameError> {
+    /// Initialize a new game run with default settings
+    pub fn start_new_default_run(&mut self) -> Result<(), GameError> {
         self.game_state = GameState::new();
+        Ok(())
+    }
+
+    /// Initialize a new game run
+    pub fn start_new_run(&mut self, deck_type: DeckType, stake_level: StakeLevel) -> Result<(), GameError> {
+        self.game_state = GameState::new_with_settings(deck_type, stake_level);
         Ok(())
     }
 

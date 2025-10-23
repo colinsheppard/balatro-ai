@@ -27,12 +27,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut engine = BalatroEngine::new(seed);
     
     // Start a new game run
-    engine.start_new_run()?;
+    let engine = &mut engine;
+    engine.start_new_default_run().unwrap();
     
     info!("Game engine initialized successfully");
     
     // Main game loop placeholder
-    run_game_loop(&mut engine)?;
+    run_game_loop(engine)?;
     
     Ok(())
 }

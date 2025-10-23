@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 use crate::card::Card;
 use crate::deck::{Deck, DeckType};
+use crate::game;
 use crate::joker::JokerInstance;
 use crate::stakes::{Stake, StakeLevel};
 use crate::blind::Blind;
@@ -56,6 +57,13 @@ impl GameState {
             consumables: Vec::new(),
             round_number: 1,
         }
+    }
+    /// Create a new game state
+    pub fn new_with_settings(deck_type: DeckType, stake_level: StakeLevel) -> Self {
+        let mut game_state = GameState::new();
+        game_state.deck = Deck::new(deck_type);
+        game_state.stake = Stake::new(stake_level);
+        game_state
     }
 
     /// Draw cards to fill the hand
