@@ -11,6 +11,7 @@ pub mod blind;
 pub mod consumable;
 pub mod error;
 pub mod stakes;
+pub mod hand;
 
 // Re-export commonly used types
 pub use card::*;
@@ -21,6 +22,7 @@ pub use blind::*;
 pub use consumable::*;
 pub use error::*;
 pub use stakes::*;
+pub use hand::*;
 
 /// The main game engine that orchestrates all game systems
 pub struct BalatroEngine {

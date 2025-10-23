@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 use crate::card::Card;
+use crate::hand::Hand;
 use crate::deck::{Deck, DeckType};
-use crate::game;
 use crate::joker::JokerInstance;
 use crate::stakes::{Stake, StakeLevel};
 use crate::blind::Blind;
@@ -34,7 +34,7 @@ pub struct GameState {
     pub deck: Deck,
     pub stake: Stake,
     pub jokers: Vec<JokerInstance>,
-    pub hand: Vec<Card>,
+    pub hand: Hand,
     pub current_blind: Option<Blind>,
     pub consumables: Vec<Consumable>,
     pub round_number: u32,
@@ -52,7 +52,7 @@ impl GameState {
             deck: Deck::new(DeckType::Red),
             stake: Stake::new(StakeLevel::White),
             jokers: Vec::new(),
-            hand: Vec::new(),
+            hand: Hand::new(),
             current_blind: None,
             consumables: Vec::new(),
             round_number: 1,
@@ -70,7 +70,9 @@ impl GameState {
     pub fn draw_hand(&mut self) -> GameResult<()> {
         self.hand.clear();
         let cards = self.deck.draw_multiple(self.hand_size)?;
-        self.hand = cards;
+        for card in cards {
+            self.hand.add_card(card);
+        }
         Ok(())
     }
 
@@ -80,21 +82,23 @@ impl GameState {
             return Err(GameError::InvalidGameState("Cannot play empty hand".to_string()));
         }
 
-        // Calculate score based on poker hand
+        // Get the played cards before removing them
         let played_cards: Vec<Card> = selected_cards
             .iter()
-            .map(|&i| self.hand[i].clone())
+            .filter_map(|&i| self.hand.get(i).cloned())
             .collect();
+
+        if played_cards.len() != selected_cards.len() {
+            return Err(GameError::InvalidGameState("Some selected card indices are invalid".to_string()));
+        }
 
         let hand_score = self.calculate_hand_score(&played_cards)?;
         
         // Apply joker effects
         let final_score = self.apply_joker_effects(hand_score, &played_cards)?;
         
-        // Remove played cards from hand
-        for &i in selected_cards.iter().rev() {
-            self.hand.remove(i);
-        }
+        // Remove played cards from hand (in reverse order to maintain indices)
+        self.hand.remove_cards(&selected_cards)?;
 
         Ok(final_score)
     }
