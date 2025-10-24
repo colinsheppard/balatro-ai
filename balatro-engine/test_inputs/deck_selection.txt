@@ -1,0 +1,8 @@
+# Deck Selection Test - Try different deck types
+2
+3
+4
+5
+24
+1
+quit

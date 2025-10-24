@@ -1,0 +1,4 @@
+# Test session recording
+24
+1
+quit

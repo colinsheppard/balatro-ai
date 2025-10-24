@@ -29,6 +29,9 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 log = "0.4"
 env_logger = "0.10"
 
+# Date and time handling
+chrono = { version = "0.4", features = ["serde"] }
+
 # Optional: For future GUI/display features
 # bevy = "0.12"  # Uncomment when ready for graphics
 # ratatui = "0.24"  # Uncomment for terminal UI

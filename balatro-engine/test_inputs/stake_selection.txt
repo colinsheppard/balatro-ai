@@ -1,0 +1,8 @@
+# Stake Selection Test - Try different stake levels
+17
+18
+19
+20
+24
+1
+quit

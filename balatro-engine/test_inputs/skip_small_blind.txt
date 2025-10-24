@@ -1,0 +1,5 @@
+# Skip Small Blind Test - Start game, skip small blind, play big blind
+24
+2
+1
+quit

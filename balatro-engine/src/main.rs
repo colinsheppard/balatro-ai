@@ -4,27 +4,53 @@
 //! It provides a command-line interface for running the game.
 
 use balatro_engine::{
-    BalatroEngine, GameState, GamePhase, Deck, Stake
+    BalatroEngine, GameState, GamePhase, Deck, Stake, BlindStatus
 };
 use log::info;
 use std::env;
-use std::io::{self, Write};
+use std::io::{self, Write, BufRead, BufReader, Read};
+use std::fs::{File, OpenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     env_logger::init();
     
-    info!("Starting Balatro Game Engine");
-    
     // Parse command line arguments
     let args: Vec<String> = env::args().collect();
-    let seed = if args.len() > 1 {
-        args[1].parse().unwrap_or(12345)
-    } else {
-        12345
-    };
+    let mut seed = 12345;
+    let mut record_session = false;
     
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--record" => {
+                record_session = true;
+                env::set_var("BALATRO_RECORD", "1");
+            }
+            "--seed" => {
+                if i + 1 < args.len() {
+                    seed = args[i + 1].parse().unwrap_or(12345);
+                    i += 1; // Skip the seed value
+                }
+            }
+            _ => {
+                // Try to parse as seed (backward compatibility)
+                if let Ok(parsed_seed) = args[i].parse::<u64>() {
+                    seed = parsed_seed;
+                }
+            }
+        }
+        i += 1;
+    }
+    
+    // Initialize input source for automated testing
+    initialize_input_source();
+    
+    info!("Starting Balatro Game Engine");
     info!("Using random seed: {}", seed);
+    if record_session {
+        info!("Session recording enabled");
+    }
     
     // Create and initialize the game engine
     let mut engine = BalatroEngine::new(seed);
@@ -90,6 +116,22 @@ fn display_game_state(game_state: &GameState) {
     println!("Hand Size: {}", game_state.hand_size);
     println!("Jokers: {}", game_state.jokers.len());
     println!("Consumables: {}", game_state.consumables.len());
+    
+    // Display blind statuses
+    println!("Blinds Status:");
+    println!("  Small: {:?} (Score: {}, Money: {})", 
+             game_state.upcoming_blinds.small.status,
+             game_state.upcoming_blinds.small.required_score,
+             game_state.upcoming_blinds.small.reward_money);
+    println!("  Big: {:?} (Score: {}, Money: {})", 
+             game_state.upcoming_blinds.big.status,
+             game_state.upcoming_blinds.big.required_score,
+             game_state.upcoming_blinds.big.reward_money);
+    println!("  Boss: {:?} (Score: {}, Money: {})", 
+             game_state.upcoming_blinds.boss.status,
+             game_state.upcoming_blinds.boss.required_score,
+             game_state.upcoming_blinds.boss.reward_money);
+    
     println!("========================");
 }
 
@@ -114,7 +156,7 @@ fn handle_shop_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::erro
 /// Handle the BlindSelect phase
 fn handle_blind_select_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
     display_blind_select_phase_state(engine.game_state());
-    display_blind_select_actions();
+    display_blind_select_actions(engine.game_state());
     let choice = get_user_input()?;
     process_blind_select_action(engine, choice)?;
     Ok(())
@@ -169,10 +211,18 @@ fn display_shop_phase_state(game_state: &GameState) {
 fn display_blind_select_phase_state(game_state: &GameState) {
     println!("\n--- BLIND SELECT PHASE ---");
     println!("Ante {}", game_state.ante);
-    if let Some(blind) = &game_state.current_blind {
-        println!("Current Blind: {:?}", blind);
+    
+    if let Some(next_blind) = game_state.upcoming_blinds.get_next_upcoming_blind() {
+        println!("Next Blind: {}", next_blind.name);
+        println!("Required Score: {}", next_blind.required_score);
+        println!("Reward Money: ${}", next_blind.reward_money);
+        println!("Type: {:?}", next_blind.blind_type);
+        
+        if let Some(boss_effect) = &next_blind.boss_effect {
+            println!("Boss Effect: {:?}", boss_effect);
+        }
     } else {
-        println!("No blind selected");
+        println!("All blinds completed for this ante!");
     }
 }
 
@@ -215,14 +265,14 @@ fn display_menu_actions(engine: &BalatroEngine) {
     // Display deck selection actions with descriptions
     for (i, deck_type) in deck_types.iter().enumerate() {
         let description = engine.get_deck_type_description(deck_type);
-        println!("{}: Select {} Deck - {}", i + 1, deck_type, description);
+        println!("{}: Select {}", i + 1, description);
     }
     
     // Display stake selection actions with descriptions
     let stake_start = deck_types.len() + 1;
     for (i, stake_level) in stake_levels.iter().enumerate() {
         let description = engine.get_stake_level_description(stake_level);
-        println!("{}: Select {} Stake - {}", stake_start + i, stake_level, description);
+        println!("{}: Select {}", stake_start + i, description);
     }
     
     // Display other actions
@@ -242,12 +292,19 @@ fn display_shop_actions() {
 }
 
 /// Display available BlindSelect actions
-fn display_blind_select_actions() {
+fn display_blind_select_actions(game_state: &GameState) {
     println!("\nAvailable Actions:");
-    println!("1. Select Boss Blind");
-    println!("2. Select Elite Blind");
-    println!("3. Select Normal Blind");
-    println!("4. View Blind Details");
+    
+    if let Some(next_blind) = game_state.upcoming_blinds.get_next_upcoming_blind() {
+        println!("1. Play {} - Face the blind and try to beat it", next_blind.name);
+        
+        if next_blind.can_skip() {
+            println!("2. Skip {} - Skip this blind (costs money)", next_blind.name);
+        }
+    } else {
+        println!("All blinds completed for this ante!");
+        println!("1. Continue to next ante");
+    }
 }
 
 /// Display available Playing actions
@@ -278,16 +335,210 @@ fn display_game_over_actions() {
     println!("4. Exit");
 }
 
-/// Get user input as a number
+/// Input source for automated testing
+enum InputSource {
+    Interactive,
+    InteractiveRecording(File), // Interactive mode with recording
+    File(BufReader<File>),
+    FileRecording(BufReader<File>, File), // File input with recording
+    Stdin(BufReader<io::Stdin>),
+    StdinRecording(BufReader<io::Stdin>, File), // Stdin input with recording
+}
+
+impl InputSource {
+    fn new() -> Self {
+        // Check if recording is enabled first
+        let recording_enabled = env::var("BALATRO_RECORD").is_ok();
+        
+        // Check if input file is provided via environment variable
+        if let Ok(input_file) = env::var("BALATRO_INPUT_FILE") {
+            let file = File::open(&input_file)
+                .expect(&format!("Failed to open input file: {}", input_file));
+            
+            if recording_enabled {
+                // Create recording file and wrap the input file reader
+                let recording_file = Self::create_recording_file_internal();
+                Self::FileRecording(BufReader::new(file), recording_file)
+            } else {
+                Self::File(BufReader::new(file))
+            }
+        } else {
+            // Check if stdin has data (for piping)
+            let stdin = io::stdin();
+            let mut handle = stdin.lock();
+            let mut buffer = [0; 1];
+            match handle.read(&mut buffer) {
+                Ok(0) => {
+                    // No data available, check if recording is enabled
+                    if recording_enabled {
+                        Self::create_recording_file()
+                    } else {
+                        Self::Interactive
+                    }
+                }
+                Ok(_) => {
+                    // Data available, read from stdin
+                    if recording_enabled {
+                        let recording_file = Self::create_recording_file_internal();
+                        Self::StdinRecording(BufReader::new(io::stdin()), recording_file)
+                    } else {
+                        Self::Stdin(BufReader::new(io::stdin()))
+                    }
+                }
+                Err(_) => {
+                    // Check if recording is enabled
+                    if recording_enabled {
+                        Self::create_recording_file()
+                    } else {
+                        Self::Interactive
+                    }
+                }
+            }
+        }
+    }
+
+    fn create_recording_file() -> Self {
+        // Create timestamped recording file
+        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+        let filename = format!("output/session_{}.txt", timestamp);
+        
+        // Ensure output directory exists
+        std::fs::create_dir_all("output").expect("Failed to create output directory");
+        
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(&filename)
+            .expect(&format!("Failed to create recording file: {}", filename));
+        
+        println!("Recording session to: {}", filename);
+        Self::InteractiveRecording(file)
+    }
+
+    fn create_recording_file_internal() -> File {
+        // Create timestamped recording file
+        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+        let filename = format!("output/session_{}.txt", timestamp);
+        
+        // Ensure output directory exists
+        std::fs::create_dir_all("output").expect("Failed to create output directory");
+        
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .append(true)
+            .open(&filename)
+            .expect(&format!("Failed to create recording file: {}", filename));
+        
+        println!("Recording session to: {}", filename);
+        file
+    }
+
+    fn read_line(&mut self) -> Result<String, Box<dyn std::error::Error>> {
+        match self {
+            Self::Interactive => {
+                let mut input = String::new();
+                io::stdin().read_line(&mut input)?;
+                Ok(input)
+            }
+            Self::InteractiveRecording(file) => {
+                let mut input = String::new();
+                io::stdin().read_line(&mut input)?;
+                
+                // Record the input to file
+                writeln!(file, "{}", input.trim())?;
+                file.flush()?;
+                
+                Ok(input)
+            }
+            Self::File(reader) => {
+                let mut line = String::new();
+                reader.read_line(&mut line)?;
+                Ok(line)
+            }
+            Self::FileRecording(reader, file) => {
+                let mut line = String::new();
+                reader.read_line(&mut line)?;
+                
+                // Record the input to file
+                writeln!(file, "{}", line.trim())?;
+                file.flush()?;
+                
+                Ok(line)
+            }
+            Self::Stdin(reader) => {
+                let mut line = String::new();
+                reader.read_line(&mut line)?;
+                Ok(line)
+            }
+            Self::StdinRecording(reader, file) => {
+                let mut line = String::new();
+                reader.read_line(&mut line)?;
+                
+                // Record the input to file
+                writeln!(file, "{}", line.trim())?;
+                file.flush()?;
+                
+                Ok(line)
+            }
+        }
+    }
+}
+
+// Global input source
+static mut INPUT_SOURCE: Option<InputSource> = None;
+
+fn initialize_input_source() {
+    unsafe {
+        INPUT_SOURCE = Some(InputSource::new());
+    }
+}
+
 fn get_user_input() -> Result<u32, Box<dyn std::error::Error>> {
-    print!("\nEnter your choice (number): ");
-    io::stdout().flush()?;
-    
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    
-    let choice = input.trim().parse::<u32>()?;
-    Ok(choice)
+    unsafe {
+        if let Some(ref mut source) = INPUT_SOURCE {
+            match source {
+                InputSource::Interactive | InputSource::InteractiveRecording(_) => {
+                    print!("\nEnter your choice (number) or 'quit' to exit: ");
+                    io::stdout().flush()?;
+                }
+                _ => {
+                    // For automated input, don't print prompt
+                }
+            }
+            
+            loop {
+                let input = source.read_line()?;
+                let trimmed = input.trim();
+                
+                // Skip empty lines and comments
+                if trimmed.is_empty() || trimmed.starts_with('#') {
+                    continue;
+                }
+                
+                // Check for quit command
+                if trimmed.to_lowercase() == "quit" {
+                    println!("Exiting game...");
+                    std::process::exit(0);
+                }
+                
+                match trimmed.parse::<u32>() {
+                    Ok(choice) => return Ok(choice),
+                    Err(_) => {
+                        if matches!(source, InputSource::Interactive | InputSource::InteractiveRecording(_)) {
+                            println!("Invalid input. Please enter a number or 'quit' to exit.");
+                            continue;
+                        } else {
+                            return Err(format!("Invalid input in automated test: '{}'", trimmed).into());
+                        }
+                    }
+                }
+            }
+        } else {
+            Err("Input source not initialized".into())
+        }
+    }
 }
 
 /// Process Menu action
@@ -341,17 +592,47 @@ fn process_shop_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Bo
     Ok(())
 }
 
-/// Process BlindSelect action (stub)
+/// Process BlindSelect action
 fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
-    println!("BlindSelect action {} selected (stub)", choice);
-    // TODO: Implement actual blind selection actions
-    match choice {
-        1..=3 => {
-            println!("Blind selected, starting play phase...");
-            engine.game_state_mut().phase = GamePhase::Playing;
+    let game_state = engine.game_state_mut();
+    
+    if let Some(next_blind) = game_state.upcoming_blinds.get_next_upcoming_blind() {
+        match choice {
+            1 => {
+                // Play the blind
+                println!("Playing {}...", next_blind.name);
+                if let Some(blind_mut) = game_state.upcoming_blinds.get_next_upcoming_blind_mut() {
+                    blind_mut.status = BlindStatus::Active;
+                }
+                game_state.phase = GamePhase::Playing;
+            }
+            2 => {
+                // Skip the blind (only available for Small/Big blinds)
+                if next_blind.can_skip() {
+                    println!("Skipping {}...", next_blind.name);
+                    if let Some(blind_mut) = game_state.upcoming_blinds.get_next_upcoming_blind_mut() {
+                        blind_mut.status = BlindStatus::Skipped;
+                    }
+                    // TODO: Deduct skip cost from money
+                    println!("Blind skipped! Moving to next blind or ante completion.");
+                } else {
+                    println!("Cannot skip boss blinds!");
+                }
+            }
+            _ => println!("Invalid choice: {}", choice),
         }
-        _ => println!("Invalid blind select choice: {}", choice),
+    } else {
+        // All blinds completed, move to next ante
+        match choice {
+            1 => {
+                println!("Moving to next ante...");
+                game_state.start_new_ante()?;
+                game_state.generate_blinds()?;
+            }
+            _ => println!("Invalid choice: {}", choice),
+        }
     }
+    
     Ok(())
 }
 

@@ -1,0 +1,6 @@
+# Mixed Strategy Test - Skip small, play big, skip boss (if possible)
+24
+2
+1
+2
+quit

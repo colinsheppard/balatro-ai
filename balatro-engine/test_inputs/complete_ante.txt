@@ -1,0 +1,6 @@
+# Complete Ante Test - Play all three blinds in sequence
+24
+1
+1
+1
+quit
