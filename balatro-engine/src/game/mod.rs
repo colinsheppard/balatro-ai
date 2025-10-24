@@ -6,7 +6,7 @@ use crate::hand::Hand;
 use crate::deck::{Deck, DeckType};
 use crate::joker::JokerInstance;
 use crate::stakes::{Stake, StakeLevel};
-use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect};
+use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor};
 use crate::consumable::Consumable;
 use crate::error::{GameError, GameResult};
 
@@ -44,13 +44,16 @@ impl GameState {
     /// Create a new game state
     pub fn new() -> Self {
         let stake = Stake::new(StakeLevel::White);
-        let processor = BlindProcessor;
+        let processor = BlindProcessor::new().unwrap_or_else(|_| {
+            // Fallback processor if CSV loading fails
+            panic!("Failed to initialize BlindProcessor - CSV file not found or invalid");
+        });
         let upcoming_blinds = processor.generate_blinds(1, &stake).unwrap_or_else(|_| {
             // Fallback blinds if generation fails
             UpcomingBlinds::new(
                 Blind::new("Small Blind 1".to_string(), BlindType::Small, 300, 2),
-                Blind::new("Big Blind 1".to_string(), BlindType::Big, 400, 3),
-                Blind::new_boss("Boss Blind 1".to_string(), 500, 4, BossEffect::None),
+                Blind::new("Big Blind 1".to_string(), BlindType::Big, 450, 3),
+                Blind::new_boss("Boss Blind 1".to_string(), 600, 4, BossEffect::None),
             )
         });
 
@@ -176,59 +179,9 @@ impl GameState {
 
     /// Generate new blinds for the current ante
     pub fn generate_blinds(&mut self) -> GameResult<()> {
-        let processor = BlindProcessor;
+        let processor = BlindProcessor::new()?;
         let upcoming_blinds = processor.generate_blinds(self.ante, &self.stake)?;
         self.upcoming_blinds = upcoming_blinds;
         Ok(())
-    }
-}
-
-/// Processor for generating and managing blinds
-pub struct BlindProcessor;
-
-impl BlindProcessor {
-    /// Generate the three blinds for a given ante
-    pub fn generate_blinds(&self, ante: u32, stake: &Stake) -> GameResult<UpcomingBlinds> {
-        // Calculate base scores and rewards based on ante and stake modifiers
-        let base_small_score = (ante * 300) as i32;
-        let base_big_score = (ante * 400) as i32;
-        let base_boss_score = (ante * 500) as i32;
-        
-        let base_small_money = (ante * 2) as i32;
-        let base_big_money = (ante * 3) as i32;
-        let base_boss_money = (ante * 4) as i32;
-
-        // Apply stake modifiers
-        let small_score = (base_small_score as f32 * stake.modifiers.blind_score_multiplier) as i32;
-        let big_score = (base_big_score as f32 * stake.modifiers.blind_score_multiplier) as i32;
-        let boss_score = (base_boss_score as f32 * stake.modifiers.blind_score_multiplier) as i32;
-
-        let small_money = (base_small_money as f32 * stake.modifiers.money_reward_multiplier) as i32;
-        let big_money = (base_big_money as f32 * stake.modifiers.money_reward_multiplier) as i32;
-        let boss_money = (base_boss_money as f32 * stake.modifiers.money_reward_multiplier) as i32;
-
-        // Create the blinds
-        let small = Blind::new(
-            format!("Small Blind {}", ante),
-            BlindType::Small,
-            small_score,
-            small_money,
-        );
-
-        let big = Blind::new(
-            format!("Big Blind {}", ante),
-            BlindType::Big,
-            big_score,
-            big_money,
-        );
-
-        let boss = Blind::new_boss(
-            format!("Boss Blind {}", ante),
-            boss_score,
-            boss_money,
-            BossEffect::None, // TODO: Implement specific boss effects based on ante
-        );
-
-        Ok(UpcomingBlinds::new(small, big, boss))
     }
 }

@@ -1,14 +1,16 @@
 //! Blind system for Balatro game engine
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fs;
+use crate::error::{GameError, GameResult};
 
 /// Types of blinds in the game
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BlindType {
     Small,
     Big,
-    Boss,
-    Finisher,
+    Boss
 }
 
 /// Status of a blind in the game
@@ -25,6 +27,21 @@ pub enum BlindStatus {
 pub enum BossEffect {
     // Add specific boss effects here as we implement them
     None,
+}
+
+/// Data structure for CSV row containing base required scores
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct BaseScoreRow {
+    ante: i32,
+    required_score: i32,
+    green_stake_required_score: i32,
+    purple_stake_required_score: i32,
+}
+
+/// Manager for loading and accessing base required scores by ante
+#[derive(Debug, Clone)]
+pub struct BaseScoreManager {
+    scores: HashMap<i32, BaseScoreRow>,
 }
 
 /// A blind that the player must overcome
@@ -77,6 +94,78 @@ impl Blind {
     }
 }
 
+impl BaseScoreManager {
+    /// Parse scientific notation string to i32, clamping to i32::MAX if too large
+    fn parse_scientific_to_i32(s: &str) -> GameResult<i32> {
+        // Try parsing as f64 first to handle scientific notation
+        let value = s.parse::<f64>()
+            .map_err(|e| GameError::InvalidGameState(format!("Failed to parse number: {}", e)))?;
+        
+        // Clamp to i32 range
+        if value > i32::MAX as f64 {
+            Ok(i32::MAX)
+        } else if value < i32::MIN as f64 {
+            Ok(i32::MIN)
+        } else {
+            Ok(value as i32)
+        }
+    }
+    
+    /// Create a new BaseScoreManager by loading the CSV file
+    pub fn new() -> GameResult<Self> {
+        let csv_path = ".config/base_required_scores_by_ante.csv";
+        let content = fs::read_to_string(csv_path)
+            .map_err(|e| GameError::InvalidGameState(format!("Failed to read CSV file: {}", e)))?;
+        
+        let mut scores = HashMap::new();
+        let mut lines = content.lines();
+        
+        // Skip header line
+        lines.next();
+        
+        for line in lines {
+            let parts: Vec<&str> = line.split(',').collect();
+            if parts.len() >= 4 {
+                let ante = parts[0].parse::<i32>()
+                    .map_err(|e| GameError::InvalidGameState(format!("Invalid ante number: {}", e)))?;
+                
+                // Parse scientific notation and convert to i32, clamping to i32::MAX if too large
+                let required_score = Self::parse_scientific_to_i32(parts[1])
+                    .map_err(|e| GameError::InvalidGameState(format!("Invalid required_score: {}", e)))?;
+                let green_stake_required_score = Self::parse_scientific_to_i32(parts[2])
+                    .map_err(|e| GameError::InvalidGameState(format!("Invalid green_stake_required_score: {}", e)))?;
+                let purple_stake_required_score = Self::parse_scientific_to_i32(parts[3])
+                    .map_err(|e| GameError::InvalidGameState(format!("Invalid purple_stake_required_score: {}", e)))?;
+                
+                scores.insert(ante, BaseScoreRow {
+                    ante,
+                    required_score,
+                    green_stake_required_score,
+                    purple_stake_required_score,
+                });
+            }
+        }
+        
+        Ok(Self { scores })
+    }
+    
+    /// Get the base required score for a given ante and stake level
+    pub fn get_base_score(&self, ante: i32, stake_level: &crate::stakes::StakeLevel) -> GameResult<i32> {
+        self.scores.get(&ante)
+            .map(|row| {
+                match stake_level {
+                    // White and Red stakes use the first column (required_score)
+                    crate::stakes::StakeLevel::White | crate::stakes::StakeLevel::Red => row.required_score,
+                    // Green, Blue, Black stakes use the second column (green_stake_required_score)
+                    crate::stakes::StakeLevel::Green | crate::stakes::StakeLevel::Blue | crate::stakes::StakeLevel::Black => row.green_stake_required_score,
+                    // Purple, Orange, Gold stakes use the third column (purple_stake_required_score)
+                    crate::stakes::StakeLevel::Purple | crate::stakes::StakeLevel::Orange | crate::stakes::StakeLevel::Gold => row.purple_stake_required_score,
+                }
+            })
+            .ok_or_else(|| GameError::InvalidGameState(format!("No base score found for ante {}", ante)))
+    }
+}
+
 impl UpcomingBlinds {
     /// Create a new UpcomingBlinds with the three blinds for an ante
     pub fn new(small: Blind, big: Blind, boss: Blind) -> Self {
@@ -89,7 +178,6 @@ impl UpcomingBlinds {
             BlindType::Small => Some(&self.small),
             BlindType::Big => Some(&self.big),
             BlindType::Boss => Some(&self.boss),
-            BlindType::Finisher => None, // Finisher blinds are not part of UpcomingBlinds
         }
     }
 
@@ -99,7 +187,6 @@ impl UpcomingBlinds {
             BlindType::Small => Some(&mut self.small),
             BlindType::Big => Some(&mut self.big),
             BlindType::Boss => Some(&mut self.boss),
-            BlindType::Finisher => None, // Finisher blinds are not part of UpcomingBlinds
         }
     }
 
@@ -127,5 +214,66 @@ impl UpcomingBlinds {
         } else {
             None
         }
+    }
+}
+
+/// Processor for generating and managing blinds
+pub struct BlindProcessor {
+    base_score_manager: BaseScoreManager,
+}
+
+impl BlindProcessor {
+    /// Create a new BlindProcessor
+    pub fn new() -> GameResult<Self> {
+        let base_score_manager = BaseScoreManager::new()?;
+        Ok(Self { base_score_manager })
+    }
+    
+    /// Generate the three blinds for a given ante
+    pub fn generate_blinds(&self, ante: u32, stake: &crate::stakes::Stake) -> GameResult<UpcomingBlinds> {
+        // Get the base score from CSV data based on stake level
+        let base_score = self.base_score_manager.get_base_score(ante as i32, &stake.level)?;
+        
+        // Calculate required scores based on wiki rules:
+        // Small Blind = 1x base chips
+        // Big Blind = 1.5x base chips  
+        // Boss Blind = 2x base chips
+        let small_score = base_score;
+        let big_score = (base_score as f32 * 1.5) as i32;
+        let boss_score = base_score * 2;
+        
+        // Calculate base money rewards (these can stay simple for now)
+        let base_small_money = (ante * 2) as i32;
+        let base_big_money = (ante * 3) as i32;
+        let base_boss_money = (ante * 4) as i32;
+
+        // Apply stake modifiers to money rewards only (scores are already correct from CSV)
+        let small_money = (base_small_money as f32 * stake.modifiers.money_reward_multiplier) as i32;
+        let big_money = (base_big_money as f32 * stake.modifiers.money_reward_multiplier) as i32;
+        let boss_money = (base_boss_money as f32 * stake.modifiers.money_reward_multiplier) as i32;
+
+        // Create the blinds
+        let small = Blind::new(
+            format!("Small Blind {}", ante),
+            BlindType::Small,
+            small_score,
+            small_money,
+        );
+
+        let big = Blind::new(
+            format!("Big Blind {}", ante),
+            BlindType::Big,
+            big_score,
+            big_money,
+        );
+
+        let boss = Blind::new_boss(
+            format!("Boss Blind {}", ante),
+            boss_score,
+            boss_money,
+            BossEffect::None, // TODO: Implement specific boss effects based on ante
+        );
+
+        Ok(UpcomingBlinds::new(small, big, boss))
     }
 }
