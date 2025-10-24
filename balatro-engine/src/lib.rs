@@ -28,39 +28,60 @@ pub use actions::*;
 
 /// The main game engine that orchestrates all game systems
 pub struct BalatroEngine {
-    game_state: GameState,
+    game_state: Option<GameState>,
     random_seed: u64,
+    selected_deck: Option<DeckType>,
+    selected_stake: Option<StakeLevel>,
 }
 
 impl BalatroEngine {
     /// Create a new game engine with the given seed
     pub fn new(seed: u64) -> Self {
         Self {
-            game_state: GameState::new(),
+            game_state: None,
             random_seed: seed,
+            selected_deck: Some(DeckType::Red),
+            selected_stake: Some(StakeLevel::White),
         }
     }
 
     /// Initialize a new game run with default settings
     pub fn start_new_default_run(&mut self) -> Result<(), GameError> {
-        self.game_state = GameState::new();
+        self.game_state = Some(GameState::new());
         Ok(())
     }
 
     /// Initialize a new game run
     pub fn start_new_run(&mut self, deck_type: DeckType, stake_level: StakeLevel) -> Result<(), GameError> {
-        self.game_state = GameState::new_with_settings(deck_type, stake_level);
+        self.game_state = Some(GameState::new_with_settings(deck_type, stake_level));
         Ok(())
+    }
+
+    /// Start a new run with the currently selected deck and stake
+    pub fn start_new_run_with_selections(&mut self) -> Result<(), GameError> {
+        let deck_type = self.selected_deck.take().unwrap_or(DeckType::Red);
+        let stake_level = self.selected_stake.take().unwrap_or(StakeLevel::White);
+        self.start_new_run(deck_type, stake_level)
+    }
+
+    /// Set the selected deck type
+    pub fn set_selected_deck(&mut self, deck_type: DeckType) {
+        self.selected_deck = Some(deck_type);
+    }
+
+    /// Set the selected stake level
+    pub fn set_selected_stake(&mut self, stake_level: StakeLevel) {
+        self.selected_stake = Some(stake_level);
     }
 
     /// Get the current game state
     pub fn game_state(&self) -> &GameState {
-        &self.game_state
+        self.game_state.as_ref().expect("GameState not initialized")
     }
 
     /// Get mutable access to the game state
     pub fn game_state_mut(&mut self) -> &mut GameState {
-        &mut self.game_state
+        self.game_state.as_mut().expect("GameState not initialized")
     }
 
     /// Get all available deck types
@@ -108,6 +129,21 @@ impl BalatroEngine {
             StakeLevel::Orange => "Orange Stake - One less hand per round".to_string(),
             StakeLevel::Gold => "Gold Stake - All previous modifiers combined".to_string(),
         }
+    }
+
+    /// Get the selected deck type
+    pub fn selected_deck(&self) -> Option<&DeckType> {
+        self.selected_deck.as_ref()
+    }
+
+    /// Get the selected stake level
+    pub fn selected_stake(&self) -> Option<&StakeLevel> {
+        self.selected_stake.as_ref()
+    }
+
+    /// Get the random seed
+    pub fn random_seed(&self) -> u64 {
+        self.random_seed
     }
 }
 

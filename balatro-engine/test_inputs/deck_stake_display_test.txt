@@ -1,0 +1,6 @@
+# Test deck and stake display functionality
+1
+16
+24
+4
+quit

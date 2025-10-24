@@ -13,7 +13,6 @@ use crate::error::{GameError, GameResult};
 /// Current game phase
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GamePhase {
-    Menu,
     Shop,
     BlindSelect,
     Playing,
@@ -58,7 +57,7 @@ impl GameState {
         });
 
         Self {
-            phase: GamePhase::Menu,
+            phase: GamePhase::BlindSelect,
             ante: 1,
             hand_size: 8,
             money: 4,

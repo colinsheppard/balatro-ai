@@ -4,7 +4,7 @@
 //! It provides a command-line interface for running the game.
 
 use balatro_engine::{
-    BalatroEngine, GameState, GamePhase, Deck, Stake, BlindStatus
+    BalatroEngine, GameState, GamePhase, BlindStatus
 };
 use log::info;
 use std::env;
@@ -52,23 +52,106 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         info!("Session recording enabled");
     }
     
-    // Create and initialize the game engine
-    let mut engine = BalatroEngine::new(seed);
-    
-    // Start a new game run
-    let engine = &mut engine;
-    engine.start_new_default_run().unwrap();
-    
-    info!("Game engine initialized successfully");
-    
-    // Main game loop placeholder
-    run_game_loop(engine)?;
+    // Main game loop with restart capability
+    loop {
+        // Create the game engine (without initializing GameState yet)
+        let mut engine = BalatroEngine::new(seed);
+        
+        info!("Game engine initialized successfully");
+        
+        // Handle menu phase before creating GameState
+        handle_initial_menu(&mut engine)?;
+        
+        // Main game loop
+        if !run_game_loop(&mut engine)? {
+            break; // Exit the outer loop
+        }
+        // If we reach here, the game ended and we should restart
+    }
     
     Ok(())
 }
 
+/// Handle the initial menu phase before creating GameState
+fn handle_initial_menu(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
+    info!("Starting initial menu phase");
+    
+    loop {
+        display_initial_menu(engine);
+        let choice = get_user_input()?;
+        
+        if process_initial_menu_action(engine, choice)? {
+            break; // Exit the menu loop
+        }
+    }
+    
+    Ok(())
+}
+
+/// Display the initial menu (before GameState creation)
+fn display_initial_menu(engine: &BalatroEngine) {
+    println!("\n=== BALATRO GAME MENU ===");
+    println!("Welcome to Balatro!");
+    
+    // Display current selections
+    if let Some(deck_type) = engine.selected_deck() {
+        println!("Current Deck: {:?}", deck_type);
+    } else {
+        println!("Current Deck: Not selected");
+    }
+    
+    if let Some(stake_level) = engine.selected_stake() {
+        println!("Current Stake: {:?}", stake_level);
+    } else {
+        println!("Current Stake: Not selected");
+    }
+    
+    println!("Select your deck and stake to begin:");
+    
+    display_menu_actions(engine);
+}
+
+/// Process initial menu action and return true if we should exit the menu
+fn process_initial_menu_action(engine: &mut BalatroEngine, choice: u32) -> Result<bool, Box<dyn std::error::Error>> {
+    let deck_types = engine.available_deck_types();
+    let stake_levels = engine.available_stake_levels();
+    let deck_count = deck_types.len() as u32;
+    let stake_count = stake_levels.len() as u32;
+    
+    match choice {
+        // Deck selection (1 to deck_count)
+        n if n >= 1 && n <= deck_count => {
+            let deck_index = (n - 1) as usize;
+            let selected_deck = deck_types[deck_index].clone();
+            println!("Selected deck: {:?}", selected_deck);
+            engine.set_selected_deck(selected_deck);
+        }
+        // Stake selection (deck_count + 1 to deck_count + stake_count)
+        n if n > deck_count && n <= deck_count + stake_count => {
+            let stake_index = (n - deck_count - 1) as usize;
+            let selected_stake = stake_levels[stake_index].clone();
+            println!("Selected stake: {:?}", selected_stake);
+            engine.set_selected_stake(selected_stake);
+        }
+        // Start game
+        n if n == deck_count + stake_count + 1 => {
+            println!("Starting new game...");
+            engine.start_new_run_with_selections()?;
+            return Ok(true); // Exit the menu
+        }
+        // Exit
+        n if n == deck_count + stake_count + 2 => {
+            println!("Exiting game...");
+            std::process::exit(0);
+        }
+        _ => println!("Invalid menu choice: {}", choice),
+    }
+    
+    Ok(false) // Continue in menu
+}
+
 /// Main game loop
-fn run_game_loop(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
+fn run_game_loop(engine: &mut BalatroEngine) -> Result<bool, Box<dyn std::error::Error>> {
     info!("Starting main game loop");
     
     loop {
@@ -79,9 +162,6 @@ fn run_game_loop(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::E
         
         // Handle phase-specific logic
         match game_state.phase {
-            GamePhase::Menu => {
-                handle_menu_phase(engine)?;
-            }
             GamePhase::Shop => {
                 handle_shop_phase(engine)?;
             }
@@ -95,20 +175,19 @@ fn run_game_loop(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::E
                 handle_round_end_phase(engine)?;
             }
             GamePhase::GameOver => {
-                handle_game_over_phase(engine)?;
-                break; // Exit the game loop
+                let should_restart = handle_game_over_phase(engine)?;
+                return Ok(should_restart); // Return whether to restart
             }
         }
     }
-    
-    info!("Game loop ended");
-    Ok(())
 }
 
 /// Display the current game state
 fn display_game_state(game_state: &GameState) {
     println!("\n=== BALATRO GAME STATE ===");
     println!("Phase: {:?}", game_state.phase);
+    println!("Deck: {:?}", game_state.deck.deck_type);
+    println!("Stake: {:?}", game_state.stake.level);
     println!("Ante: {}", game_state.ante);
     println!("Round: {}", game_state.round_number);
     println!("Money: ${}", game_state.money);
@@ -135,14 +214,6 @@ fn display_game_state(game_state: &GameState) {
     println!("========================");
 }
 
-/// Handle the Menu phase
-fn handle_menu_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
-    display_menu_phase_state(engine);
-    display_menu_actions(engine);
-    let choice = get_user_input()?;
-    process_menu_action(engine, choice)?;
-    Ok(())
-}
 
 /// Handle the Shop phase
 fn handle_shop_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
@@ -181,22 +252,14 @@ fn handle_round_end_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std:
 }
 
 /// Handle the GameOver phase
-fn handle_game_over_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_game_over_phase(engine: &mut BalatroEngine) -> Result<bool, Box<dyn std::error::Error>> {
     display_game_over_phase_state(engine.game_state());
     display_game_over_actions();
     let choice = get_user_input()?;
-    process_game_over_action(engine, choice)?;
-    Ok(())
+    let should_restart = process_game_over_action(engine, choice)?;
+    Ok(should_restart)
 }
 
-/// Display Menu phase specific state
-fn display_menu_phase_state(engine: &BalatroEngine) {
-    let game_state = engine.game_state();
-    println!("\n--- MENU PHASE ---");
-    println!("Welcome to Balatro!");
-    println!("Current Deck: {:?}", game_state.deck.deck_type);
-    println!("Current Stake: {:?}", game_state.stake.level);
-}
 
 /// Display Shop phase specific state
 fn display_shop_phase_state(game_state: &GameState) {
@@ -541,42 +604,6 @@ fn get_user_input() -> Result<u32, Box<dyn std::error::Error>> {
     }
 }
 
-/// Process Menu action
-fn process_menu_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
-    let deck_types = engine.available_deck_types();
-    let stake_levels = engine.available_stake_levels();
-    let deck_count = deck_types.len() as u32;
-    let stake_count = stake_levels.len() as u32;
-    
-    match choice {
-        // Deck selection (1 to deck_count)
-        n if n >= 1 && n <= deck_count => {
-            let deck_index = (n - 1) as usize;
-            let selected_deck = deck_types[deck_index].clone();
-            println!("Selected deck: {:?}", selected_deck);
-            engine.game_state_mut().deck = Deck::new(selected_deck);
-        }
-        // Stake selection (deck_count + 1 to deck_count + stake_count)
-        n if n > deck_count && n <= deck_count + stake_count => {
-            let stake_index = (n - deck_count - 1) as usize;
-            let selected_stake = stake_levels[stake_index].clone();
-            println!("Selected stake: {:?}", selected_stake);
-            engine.game_state_mut().stake = Stake::new(selected_stake);
-        }
-        // Start game
-        n if n == deck_count + stake_count + 1 => {
-            println!("Starting new game...");
-            engine.game_state_mut().phase = GamePhase::BlindSelect;
-        }
-        // Exit
-        n if n == deck_count + stake_count + 2 => {
-            println!("Exiting game...");
-            engine.game_state_mut().phase = GamePhase::GameOver;
-        }
-        _ => println!("Invalid menu choice: {}", choice),
-    }
-    Ok(())
-}
 
 /// Process Shop action (stub)
 fn process_shop_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
@@ -669,19 +696,23 @@ fn process_round_end_action(engine: &mut BalatroEngine, choice: u32) -> Result<(
 }
 
 /// Process GameOver action (stub)
-fn process_game_over_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+fn process_game_over_action(_engine: &mut BalatroEngine, choice: u32) -> Result<bool, Box<dyn std::error::Error>> {
     println!("GameOver action {} selected (stub)", choice);
     // TODO: Implement actual game over actions
     match choice {
         1 => {
             println!("Starting new game...");
-            engine.game_state_mut().phase = GamePhase::Menu;
+            // Return true to indicate we should restart
+            Ok(true)
         }
         4 => {
             println!("Exiting...");
-            // This will cause the game loop to exit
+            // Return false to indicate we should exit
+            Ok(false)
         }
-        _ => println!("Invalid game over choice: {}", choice),
+        _ => {
+            println!("Invalid game over choice: {}", choice);
+            Ok(false)
+        }
     }
-    Ok(())
 }
