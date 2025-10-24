@@ -3,7 +3,9 @@
 //! This is the main executable for the Balatro game engine.
 //! It provides a command-line interface for running the game.
 
-use balatro_engine::{BalatroEngine, GameState, GamePhase};
+use balatro_engine::{
+    BalatroEngine, GameState, GamePhase, Deck, Stake
+};
 use log::info;
 use std::env;
 use std::io::{self, Write};
@@ -93,8 +95,8 @@ fn display_game_state(game_state: &GameState) {
 
 /// Handle the Menu phase
 fn handle_menu_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
-    display_menu_phase_state(engine.game_state());
-    display_menu_actions();
+    display_menu_phase_state(engine);
+    display_menu_actions(engine);
     let choice = get_user_input()?;
     process_menu_action(engine, choice)?;
     Ok(())
@@ -146,11 +148,12 @@ fn handle_game_over_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std:
 }
 
 /// Display Menu phase specific state
-fn display_menu_phase_state(game_state: &GameState) {
+fn display_menu_phase_state(engine: &BalatroEngine) {
+    let game_state = engine.game_state();
     println!("\n--- MENU PHASE ---");
     println!("Welcome to Balatro!");
-    println!("Current Stake: {:?}", game_state.stake);
-    println!("Deck Type: {:?}", game_state.deck.deck_type);
+    println!("Current Deck: {:?}", game_state.deck.deck_type);
+    println!("Current Stake: {:?}", game_state.stake.level);
 }
 
 /// Display Shop phase specific state
@@ -204,12 +207,28 @@ fn display_game_over_phase_state(game_state: &GameState) {
 }
 
 /// Display available Menu actions
-fn display_menu_actions() {
+fn display_menu_actions(engine: &BalatroEngine) {
     println!("\nAvailable Actions:");
-    println!("1. Start New Game");
-    println!("2. Continue Game");
-    println!("3. Settings");
-    println!("4. Exit");
+    let deck_types = engine.available_deck_types();
+    let stake_levels = engine.available_stake_levels();
+    
+    // Display deck selection actions with descriptions
+    for (i, deck_type) in deck_types.iter().enumerate() {
+        let description = engine.get_deck_type_description(deck_type);
+        println!("{}: Select {} Deck - {}", i + 1, deck_type, description);
+    }
+    
+    // Display stake selection actions with descriptions
+    let stake_start = deck_types.len() + 1;
+    for (i, stake_level) in stake_levels.iter().enumerate() {
+        let description = engine.get_stake_level_description(stake_level);
+        println!("{}: Select {} Stake - {}", stake_start + i, stake_level, description);
+    }
+    
+    // Display other actions
+    let start_game_index = stake_start + stake_levels.len();
+    println!("{}: Start Game", start_game_index);
+    println!("{}: Exit", start_game_index + 1);
 }
 
 /// Display available Shop actions
@@ -271,16 +290,35 @@ fn get_user_input() -> Result<u32, Box<dyn std::error::Error>> {
     Ok(choice)
 }
 
-/// Process Menu action (stub)
+/// Process Menu action
 fn process_menu_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Menu action {} selected (stub)", choice);
-    // TODO: Implement actual menu actions
+    let deck_types = engine.available_deck_types();
+    let stake_levels = engine.available_stake_levels();
+    let deck_count = deck_types.len() as u32;
+    let stake_count = stake_levels.len() as u32;
+    
     match choice {
-        1 => {
+        // Deck selection (1 to deck_count)
+        n if n >= 1 && n <= deck_count => {
+            let deck_index = (n - 1) as usize;
+            let selected_deck = deck_types[deck_index].clone();
+            println!("Selected deck: {:?}", selected_deck);
+            engine.game_state_mut().deck = Deck::new(selected_deck);
+        }
+        // Stake selection (deck_count + 1 to deck_count + stake_count)
+        n if n > deck_count && n <= deck_count + stake_count => {
+            let stake_index = (n - deck_count - 1) as usize;
+            let selected_stake = stake_levels[stake_index].clone();
+            println!("Selected stake: {:?}", selected_stake);
+            engine.game_state_mut().stake = Stake::new(selected_stake);
+        }
+        // Start game
+        n if n == deck_count + stake_count + 1 => {
             println!("Starting new game...");
             engine.game_state_mut().phase = GamePhase::BlindSelect;
         }
-        4 => {
+        // Exit
+        n if n == deck_count + stake_count + 2 => {
             println!("Exiting game...");
             engine.game_state_mut().phase = GamePhase::GameOver;
         }

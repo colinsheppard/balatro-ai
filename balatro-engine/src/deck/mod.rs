@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
+use std::fmt;
 use crate::card::{Card, Suit, Rank};
 use crate::error::{GameError, GameResult};
 
@@ -23,6 +24,28 @@ pub enum DeckType {
     Anaglyph,
     Plasma,
     Erratic,
+}
+
+impl fmt::Display for DeckType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeckType::Red => write!(f, "Red"),
+            DeckType::Blue => write!(f, "Blue"),
+            DeckType::Yellow => write!(f, "Yellow"),
+            DeckType::Green => write!(f, "Green"),
+            DeckType::Black => write!(f, "Black"),
+            DeckType::Magic => write!(f, "Magic"),
+            DeckType::Nebula => write!(f, "Nebula"),
+            DeckType::Ghost => write!(f, "Ghost"),
+            DeckType::Abandoned => write!(f, "Abandoned"),
+            DeckType::Checkered => write!(f, "Checkered"),
+            DeckType::Zodiac => write!(f, "Zodiac"),
+            DeckType::Painted => write!(f, "Painted"),
+            DeckType::Anaglyph => write!(f, "Anaglyph"),
+            DeckType::Plasma => write!(f, "Plasma"),
+            DeckType::Erratic => write!(f, "Erratic"),
+        }
+    }
 }
 
 /// A deck of cards
