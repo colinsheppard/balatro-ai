@@ -280,7 +280,7 @@ impl JokerInstance {
     }
 
     /// Apply this joker's effects to a hand
-    pub fn apply_effects(&self, cards: &[crate::card::Card]) -> GameResult<(i32, f32)> {
+    pub fn apply_effects(&self, cards: &Vec<&crate::card::Card>) -> GameResult<(i32, f32)> {
         // This will be implemented with the full effect system
         // For now, return base values
         Ok((0, 1.0))

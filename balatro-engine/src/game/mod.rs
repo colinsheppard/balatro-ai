@@ -66,10 +66,19 @@ impl GameState {
         game_state
     }
 
+    /// Draw cards to fill the hand after clearing it out first
+    pub fn clear_and_draw_hand(&mut self) -> GameResult<()> {
+        self.hand.clear();
+        self.draw_hand()?;
+        Ok(())
+    }
+
     /// Draw cards to fill the hand
     pub fn draw_hand(&mut self) -> GameResult<()> {
-        self.hand.clear();
-        let cards = self.deck.draw_multiple(self.hand_size)?;
+        if self.hand.len() >= self.hand_size {
+            return Err(GameError::InvalidGameState("Hand is already full".to_string()));
+        }
+        let cards = self.deck.draw_multiple(self.hand_size - self.hand.len())?;
         for card in cards {
             self.hand.add_card(card);
         }
@@ -77,28 +86,21 @@ impl GameState {
     }
 
     /// Play a hand of cards
-    pub fn play_hand(&mut self, selected_cards: Vec<usize>) -> GameResult<i32> {
-        if selected_cards.is_empty() {
+    pub fn play_hand(&mut self) -> GameResult<i32> {
+        if self.hand.selected_indices().is_empty() {
             return Err(GameError::InvalidGameState("Cannot play empty hand".to_string()));
         }
 
-        // Get the played cards before removing them
-        let played_cards: Vec<Card> = selected_cards
-            .iter()
-            .filter_map(|&i| self.hand.get(i).cloned())
-            .collect();
+        // Get the selected cards before removing them
+        let selected_cards: Vec<Card> = self.hand.selected_cards().into_iter().cloned().collect();
 
-        if played_cards.len() != selected_cards.len() {
-            return Err(GameError::InvalidGameState("Some selected card indices are invalid".to_string()));
-        }
-
-        let hand_score = self.calculate_hand_score(&played_cards)?;
+        let hand_score = self.calculate_hand_score(&selected_cards)?;
         
         // Apply joker effects
-        let final_score = self.apply_joker_effects(hand_score, &played_cards)?;
+        let final_score = self.apply_joker_effects(hand_score, &selected_cards)?;
         
-        // Remove played cards from hand (in reverse order to maintain indices)
-        self.hand.remove_cards(&selected_cards)?;
+        // Remove played cards from hand
+        self.hand.remove_selected_cards()?;
 
         Ok(final_score)
     }
@@ -117,8 +119,11 @@ impl GameState {
     fn apply_joker_effects(&self, base_score: i32, cards: &[Card]) -> GameResult<i32> {
         let mut final_score = base_score as f32;
         
+        // Convert &[Card] to &Vec<&Card> for joker compatibility
+        let card_refs: Vec<&Card> = cards.iter().collect();
+        
         for joker in &self.jokers {
-            let (chip_mod, mult_mod) = joker.apply_effects(cards)?;
+            let (chip_mod, mult_mod) = joker.apply_effects(&card_refs)?;
             final_score = (final_score + chip_mod as f32) * mult_mod;
         }
         

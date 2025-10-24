@@ -73,13 +73,13 @@ impl Hand {
     }
 
     /// Remove multiple cards by indices (in reverse order to maintain indices)
-    pub fn remove_cards(&mut self, indices: &[usize]) -> GameResult<Vec<Card>> {
-        if indices.is_empty() {
+    pub fn remove_selected_cards(&mut self) -> GameResult<Vec<Card>> {
+        if self.selected_indices.is_empty() {
             return Ok(Vec::new());
         }
 
         // Sort indices in descending order to remove from back to front
-        let mut sorted_indices = indices.to_vec();
+        let mut sorted_indices = self.selected_indices.clone();
         sorted_indices.sort_by(|a, b| b.cmp(a));
 
         let mut removed_cards = Vec::new();

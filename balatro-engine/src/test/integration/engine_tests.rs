@@ -1,6 +1,6 @@
 //! Integration tests for the Balatro engine
 
-use crate::{BalatroEngine, GamePhase};
+use crate::{game, BalatroEngine, GamePhase};
 use crate::joker::{JokerManager, JokerInstance, JokerRarity};
 use crate::deck::DeckType;
 
@@ -32,13 +32,20 @@ fn test_full_game_cycle() {
     let mut game_state = engine.game_state_mut();
     
     // Draw initial hand
-    game_state.draw_hand().unwrap();
+    game_state.clear_and_draw_hand().unwrap();
     assert_eq!(game_state.hand.len(), 8);
     
     // Play a hand
-    let score = game_state.play_hand(vec![0, 1, 2]).unwrap();
+    game_state.hand.select_card(0).unwrap();
+    game_state.hand.select_card(1).unwrap();
+    game_state.hand.select_card(2).unwrap();
+    let score = game_state.play_hand().unwrap();
     assert!(score > 0);
     assert_eq!(game_state.hand.len(), 5);
+
+    // Redraw the hand
+    game_state.draw_hand().unwrap();
+    assert_eq!(game_state.hand.len(), 8);
     
     // End round
     game_state.end_round().unwrap();
@@ -78,8 +85,14 @@ mult = 4
     game_state.jokers.push(joker);
     
     // Draw and play hand
-    game_state.draw_hand().unwrap();
-    let score = game_state.play_hand(vec![0, 1, 2]).unwrap();
+    game_state.clear_and_draw_hand().unwrap();
+    
+    // Select some cards to play
+    game_state.hand.select_card(0).unwrap();
+    game_state.hand.select_card(1).unwrap();
+    game_state.hand.select_card(2).unwrap();
+    
+    let score = game_state.play_hand().unwrap();
     
     // Score should be affected by joker (even if just base values)
     assert!(score > 0);
@@ -96,7 +109,7 @@ fn test_deck_interaction_with_game_state() {
     game_state.deck = crate::deck::Deck::new(DeckType::Blue);
     
     // Draw hand
-    game_state.draw_hand().unwrap();
+    game_state.clear_and_draw_hand().unwrap();
     assert_eq!(game_state.hand.len(), 8);
     assert_eq!(game_state.deck.remaining_cards(), 44);
 }
@@ -110,8 +123,14 @@ fn test_multiple_rounds() {
     
     // Play multiple rounds
     for round in 1..=3 {
-        game_state.draw_hand().unwrap();
-        game_state.play_hand(vec![0, 1, 2]).unwrap();
+        game_state.clear_and_draw_hand().unwrap();
+        
+        // Select some cards to play
+        game_state.hand.select_card(0).unwrap();
+        game_state.hand.select_card(1).unwrap();
+        game_state.hand.select_card(2).unwrap();
+        
+        game_state.play_hand().unwrap();
         game_state.end_round().unwrap();
         
         assert_eq!(game_state.round_number, round + 1);

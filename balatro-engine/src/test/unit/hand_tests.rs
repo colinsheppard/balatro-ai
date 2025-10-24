@@ -144,21 +144,21 @@ fn test_remove_multiple_cards() {
         create_test_card(Suit::Clubs, Rank::Jack),     // 3
     ]);
     
-    // Select some cards
+    // Select cards at indices 0 and 2
     hand.select_card(0).unwrap();
     hand.select_card(2).unwrap();
     
-    // Remove cards at indices 1 and 3
-    let removed = hand.remove_cards(&[1, 3]).unwrap();
+    // Remove selected cards (indices 0 and 2)
+    let removed = hand.remove_selected_cards().unwrap();
     assert_eq!(removed.len(), 2);
     assert_eq!(hand.len(), 2);
     
-    // Remaining cards should be at original indices 0 and 2
-    assert_eq!(hand.get(0).unwrap().suit, Suit::Hearts);
-    assert_eq!(hand.get(1).unwrap().suit, Suit::Diamonds);
+    // Remaining cards should be at original indices 1 and 3 (Spades and Clubs)
+    assert_eq!(hand.get(0).unwrap().suit, Suit::Spades);
+    assert_eq!(hand.get(1).unwrap().suit, Suit::Clubs);
     
-    // Selections should be adjusted for remaining cards
-    assert_eq!(hand.selected_indices(), &[0, 1]); // Card at original index 0 and 2
+    // Selections should be cleared after removal
+    assert!(hand.selected_indices().is_empty());
 }
 
 #[test]

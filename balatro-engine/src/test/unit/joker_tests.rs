@@ -263,11 +263,14 @@ mult = 4
     let manager = JokerManager::from_str(toml_content).unwrap();
     let joker = manager.create_joker("test_joker").unwrap();
     
+    let ace = Card::new(Suit::Hearts, Rank::Ace);
+    let king = Card::new(Suit::Spades, Rank::King);
+
     let cards = vec![
-        Card::new(Suit::Hearts, Rank::Ace),
-        Card::new(Suit::Spades, Rank::King),
+       &ace,
+       &king,
     ];
-    
+
     let (chip_mod, mult_mod) = joker.apply_effects(&cards).unwrap();
     assert_eq!(chip_mod, 0);
     assert_eq!(mult_mod, 1.0);
