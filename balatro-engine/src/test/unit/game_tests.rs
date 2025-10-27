@@ -3,11 +3,13 @@
 use crate::game::{GameState, GamePhase};
 use crate::deck::DeckType;
 use crate::card::{Card, Suit, Rank};
+use crate::test::fixtures::test_helpers::create_test_rng;
 
 #[test]
 fn test_game_state_creation() {
-    let game_state = GameState::new();
-    assert_eq!(game_state.phase, GamePhase::Menu);
+    let mut rng = create_test_rng();
+    let game_state = GameState::new(&mut rng);
+    assert_eq!(game_state.phase, GamePhase::BlindSelect);
     assert_eq!(game_state.ante, 1);
     assert_eq!(game_state.hand_size, 8);
     assert_eq!(game_state.money, 4);
@@ -19,7 +21,8 @@ fn test_game_state_creation() {
 
 #[test]
 fn test_drawing_hand() {
-    let mut game_state = GameState::new();
+    let mut rng = create_test_rng();
+    let mut game_state = GameState::new(&mut rng);
     game_state.hand_size = 5;
     
     game_state.draw_hand().unwrap();
@@ -29,13 +32,16 @@ fn test_drawing_hand() {
 
 #[test]
 fn test_playing_hand() {
-    let mut game_state = GameState::new();
+    let mut rng = create_test_rng();
+    let mut game_state = GameState::new(&mut rng);
     game_state.hand_size = 5;
     game_state.draw_hand().unwrap();
     
     // Play first 3 cards
-    let selected_cards = vec![0, 1, 2];
-    let score = game_state.play_hand(selected_cards).unwrap();
+    game_state.hand.select_card(0).unwrap();
+    game_state.hand.select_card(1).unwrap();
+    game_state.hand.select_card(2).unwrap();
+    let score = game_state.play_hand().unwrap();
     
     assert!(score > 0); // Should have some score
     assert_eq!(game_state.hand.len(), 2); // Should have 2 cards left
@@ -43,14 +49,16 @@ fn test_playing_hand() {
 
 #[test]
 fn test_playing_empty_hand() {
-    let mut game_state = GameState::new();
-    let result = game_state.play_hand(vec![]);
+    let mut rng = create_test_rng();
+    let mut game_state = GameState::new(&mut rng);
+    let result = game_state.play_hand();
     assert!(result.is_err());
 }
 
 #[test]
 fn test_ending_round() {
-    let mut game_state = GameState::new();
+    let mut rng = create_test_rng();
+    let mut game_state = GameState::new(&mut rng);
     let initial_round = game_state.round_number;
     
     game_state.end_round().unwrap();
@@ -60,7 +68,8 @@ fn test_ending_round() {
 
 #[test]
 fn test_starting_new_ante() {
-    let mut game_state = GameState::new();
+    let mut rng = create_test_rng();
+    let mut game_state = GameState::new(&mut rng);
     let initial_ante = game_state.ante;
     
     game_state.start_new_ante().unwrap();
@@ -71,7 +80,6 @@ fn test_starting_new_ante() {
 #[test]
 fn test_game_phase_variants() {
     let phases = [
-        GamePhase::Menu,
         GamePhase::Shop,
         GamePhase::BlindSelect,
         GamePhase::Playing,
@@ -79,8 +87,9 @@ fn test_game_phase_variants() {
         GamePhase::GameOver,
     ];
     
+    let mut rng = create_test_rng();
     for phase in phases {
-        let mut game_state = GameState::new();
+        let mut game_state = GameState::new(&mut rng);
         game_state.phase = phase.clone();
         assert_eq!(game_state.phase, phase);
     }

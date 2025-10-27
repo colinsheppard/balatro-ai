@@ -105,8 +105,12 @@ fn test_deck_interaction_with_game_state() {
     
     let game_state = engine.game_state_mut();
     
-    // Change deck type
-    game_state.deck = crate::deck::Deck::new(DeckType::Blue);
+    // Change deck type - need to use the RNG manager from the engine
+    use std::rc::Rc;
+    use std::cell::RefCell;
+    use crate::rng::GameRngManager;
+    let rng = Rc::new(RefCell::new(GameRngManager::new(12345)));
+    game_state.deck = crate::deck::Deck::new(DeckType::Blue, rng);
     
     // Draw hand
     game_state.clear_and_draw_hand().unwrap();

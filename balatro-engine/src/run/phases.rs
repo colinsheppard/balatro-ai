@@ -77,6 +77,7 @@ fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Resul
                     blind_mut.status = BlindStatus::Active;
                 }
                 game_state.phase = GamePhase::Playing;
+                game_state.deck.shuffle();
                 game_state.clear_and_draw_hand().unwrap();
             }
             2 => {

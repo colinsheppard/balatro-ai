@@ -1,12 +1,21 @@
 //! Test fixtures and utilities for testing
 
+use std::rc::Rc;
+use std::cell::RefCell;
 use crate::card::{Card, Suit, Rank};
 use crate::joker::{JokerManager, JokerInstance, JokerRarity};
 use crate::deck::{Deck, DeckType};
+use crate::rng::GameRngManager;
+
+/// Create a test RNG manager with a fixed seed wrapped in Rc<RefCell>
+pub fn create_test_rng() -> Rc<RefCell<GameRngManager>> {
+    Rc::new(RefCell::new(GameRngManager::new(42)))
+}
 
 /// Create a standard test deck
 pub fn create_test_deck() -> Deck {
-    Deck::new(DeckType::Red)
+    let rng = create_test_rng();
+    Deck::new(DeckType::Red, rng)
 }
 
 /// Create a test hand with specific cards

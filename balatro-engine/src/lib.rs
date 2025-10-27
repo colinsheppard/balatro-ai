@@ -3,6 +3,9 @@
 //! A Rust implementation of the Balatro card game engine.
 //! This module provides the core game logic, state management, and mechanics.
 
+use std::rc::Rc;
+use std::cell::RefCell;
+
 pub mod card;
 pub mod deck;
 pub mod joker;
@@ -15,6 +18,7 @@ pub mod hand;
 pub mod actions;
 pub mod input;
 pub mod run;
+pub mod rng;
 
 // Re-export commonly used types
 pub use card::*;
@@ -28,6 +32,7 @@ pub use stakes::*;
 pub use hand::*;
 pub use actions::*;
 pub use input::*;
+pub use rng::*;
 
 /// The main game engine that orchestrates all game systems
 pub struct BalatroEngine {
@@ -35,6 +40,7 @@ pub struct BalatroEngine {
     random_seed: u64,
     selected_deck: Option<DeckType>,
     selected_stake: Option<StakeLevel>,
+    rng_manager: Rc<RefCell<GameRngManager>>,
 }
 
 impl BalatroEngine {
@@ -45,18 +51,19 @@ impl BalatroEngine {
             random_seed: seed,
             selected_deck: Some(DeckType::Red),
             selected_stake: Some(StakeLevel::White),
+            rng_manager: Rc::new(RefCell::new(GameRngManager::new(seed))),
         }
     }
 
     /// Initialize a new game run with default settings
     pub fn start_new_default_run(&mut self) -> Result<(), GameError> {
-        self.game_state = Some(GameState::new());
+        self.game_state = Some(GameState::new(Rc::clone(&self.rng_manager)));
         Ok(())
     }
 
     /// Initialize a new game run
     pub fn start_new_run(&mut self, deck_type: DeckType, stake_level: StakeLevel) -> Result<(), GameError> {
-        self.game_state = Some(GameState::new_with_settings(deck_type, stake_level));
+        self.game_state = Some(GameState::new_with_settings(deck_type, stake_level, Rc::clone(&self.rng_manager)));
         Ok(())
     }
 

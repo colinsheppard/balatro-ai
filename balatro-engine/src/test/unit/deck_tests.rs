@@ -2,10 +2,12 @@
 
 use crate::deck::{Deck, DeckType};
 use crate::card::{Suit, Rank};
+use crate::test::fixtures::test_helpers::create_test_rng;
 
 #[test]
 fn test_deck_creation() {
-    let deck = Deck::new(DeckType::Red);
+    let rng = create_test_rng();
+    let deck = Deck::new(DeckType::Red, rng);
     assert_eq!(deck.remaining_cards(), 52);
     assert!(!deck.is_empty());
     assert_eq!(deck.discard_pile.len(), 0);
@@ -13,7 +15,8 @@ fn test_deck_creation() {
 
 #[test]
 fn test_deck_drawing() {
-    let mut deck = Deck::new(DeckType::Red);
+    let rng = create_test_rng();
+    let mut deck = Deck::new(DeckType::Red, rng);
     
     // Draw one card
     let card = deck.draw().unwrap();
@@ -28,7 +31,8 @@ fn test_deck_drawing() {
 
 #[test]
 fn test_deck_drawing_empty() {
-    let mut deck = Deck::new(DeckType::Red);
+    let rng = create_test_rng();
+    let mut deck = Deck::new(DeckType::Red, rng);
     
     // Draw all cards
     for _ in 0..52 {
@@ -45,7 +49,8 @@ fn test_deck_drawing_empty() {
 
 #[test]
 fn test_deck_discarding() {
-    let mut deck = Deck::new(DeckType::Red);
+    let rng = create_test_rng();
+    let mut deck = Deck::new(DeckType::Red, rng);
     let card = deck.draw().unwrap().unwrap();
     
     deck.discard(card.clone());
@@ -55,8 +60,10 @@ fn test_deck_discarding() {
 
 #[test]
 fn test_deck_shuffling() {
-    let mut deck1 = Deck::new(DeckType::Red);
-    let mut deck2 = Deck::new(DeckType::Red);
+    let rng1 = create_test_rng();
+    let rng2 = create_test_rng();
+    let mut deck1 = Deck::new(DeckType::Red, rng1);
+    let mut deck2 = Deck::new(DeckType::Red, rng2);
     
     // Shuffle one deck
     deck1.shuffle();
@@ -78,6 +85,7 @@ fn test_deck_shuffling() {
 
 #[test]
 fn test_deck_type_variants() {
+    let mut rng = create_test_rng();
     let deck_types = [
         DeckType::Red,
         DeckType::Blue,
@@ -97,7 +105,7 @@ fn test_deck_type_variants() {
     ];
     
     for deck_type in deck_types {
-        let deck = Deck::new(deck_type.clone());
+        let deck = Deck::new(deck_type.clone(), rng.clone());
         assert_eq!(deck.deck_type, deck_type);
         assert_eq!(deck.remaining_cards(), 52);
     }
@@ -105,7 +113,8 @@ fn test_deck_type_variants() {
 
 #[test]
 fn test_standard_deck_composition() {
-    let mut deck = Deck::new(DeckType::Red);
+    let rng = create_test_rng();
+    let mut deck = Deck::new(DeckType::Red, rng);
     let mut suit_counts = [0; 4];
     let mut rank_counts = [0; 13];
     
@@ -118,7 +127,8 @@ fn test_standard_deck_composition() {
             Suit::Spades => suit_counts[3] += 1,
         }
         
-        rank_counts[card.rank as usize - 1] += 1;
+        // Rank values are 2-14, array indices should be 0-12
+        rank_counts[(card.rank as usize - 2)] += 1;
     }
     
     // Check we have 13 cards of each suit

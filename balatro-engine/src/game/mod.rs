@@ -1,6 +1,8 @@
 //! Main game state and logic for Balatro game engine
 
 use serde::{Deserialize, Serialize};
+use std::rc::Rc;
+use std::cell::RefCell;
 use crate::card::Card;
 use crate::hand::Hand;
 use crate::deck::{Deck, DeckType};
@@ -9,6 +11,7 @@ use crate::stakes::{Stake, StakeLevel};
 use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor};
 use crate::consumable::Consumable;
 use crate::error::{GameError, GameResult};
+use crate::rng::GameRngManager;
 
 /// Current game phase
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,7 +26,7 @@ pub enum GamePhase {
 // Removed tuple structs - now using primitive types directly
 
 /// Main game state
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct GameState {
     pub phase: GamePhase,
     pub ante: u32,
@@ -41,7 +44,7 @@ pub struct GameState {
 
 impl GameState {
     /// Create a new game state
-    pub fn new() -> Self {
+    pub fn new(rng_manager: Rc<RefCell<GameRngManager>>) -> Self {
         let stake = Stake::new(StakeLevel::White);
         let processor = BlindProcessor::new().unwrap_or_else(|_| {
             // Fallback processor if CSV loading fails
@@ -56,13 +59,16 @@ impl GameState {
             )
         });
 
+        let mut deck = Deck::new(DeckType::Red, rng_manager);
+        deck.shuffle();
+
         Self {
             phase: GamePhase::BlindSelect,
             ante: 1,
             hand_size: 8,
             money: 4,
             score: 0,
-            deck: Deck::new(DeckType::Red),
+            deck,
             stake,
             jokers: Vec::new(),
             hand: Hand::new(),
@@ -71,12 +77,38 @@ impl GameState {
             round_number: 1,
         }
     }
-    /// Create a new game state
-    pub fn new_with_settings(deck_type: DeckType, stake_level: StakeLevel) -> Self {
-        let mut game_state = GameState::new();
-        game_state.deck = Deck::new(deck_type);
-        game_state.stake = Stake::new(stake_level);
-        game_state
+
+    /// Create a new game state with custom settings
+    pub fn new_with_settings(deck_type: DeckType, stake_level: StakeLevel, rng_manager: Rc<RefCell<GameRngManager>>) -> Self {
+        let stake = Stake::new(stake_level);
+        let processor = BlindProcessor::new().unwrap_or_else(|_| {
+            panic!("Failed to initialize BlindProcessor - CSV file not found or invalid");
+        });
+        let upcoming_blinds = processor.generate_blinds(1, &stake).unwrap_or_else(|_| {
+            UpcomingBlinds::new(
+                Blind::new("Small Blind 1".to_string(), BlindType::Small, 300, 2),
+                Blind::new("Big Blind 1".to_string(), BlindType::Big, 450, 3),
+                Blind::new_boss("Boss Blind 1".to_string(), 600, 4, BossEffect::None),
+            )
+        });
+
+        let mut deck = Deck::new(deck_type, rng_manager);
+        deck.shuffle();
+
+        Self {
+            phase: GamePhase::BlindSelect,
+            ante: 1,
+            hand_size: 8,
+            money: 4,
+            score: 0,
+            deck,
+            stake,
+            jokers: Vec::new(),
+            hand: Hand::new(),
+            upcoming_blinds,
+            consumables: Vec::new(),
+            round_number: 1,
+        }
     }
 
     /// Draw cards to fill the hand after clearing it out first

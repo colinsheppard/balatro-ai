@@ -1,10 +1,14 @@
 //! Deck system for Balatro game engine
 
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::fmt;
+use std::rc::Rc;
+use std::cell::RefCell;
+use rand::seq::SliceRandom;
 use crate::card::{Card, Suit, Rank};
-use crate::error::{GameError, GameResult};
+use crate::error::GameResult;
+use crate::rng::GameRngManager;
 
 /// Different deck types available in the game
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -49,16 +53,19 @@ impl fmt::Display for DeckType {
 }
 
 /// A deck of cards
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Deck {
     pub deck_type: DeckType,
     pub cards: VecDeque<Card>,
     pub discard_pile: Vec<Card>,
+    // Skip serde serialization for the RNG manager
+    #[allow(dead_code)]
+    rng_manager: Rc<RefCell<GameRngManager>>,
 }
 
 impl Deck {
     /// Create a new standard deck
-    pub fn new(deck_type: DeckType) -> Self {
+    pub fn new(_deck_type: DeckType, rng_manager: Rc<RefCell<GameRngManager>>) -> Self {
         let mut cards = VecDeque::new();
         
         // Create standard 52-card deck
@@ -73,9 +80,10 @@ impl Deck {
         }
         
         Self {
-            deck_type,
+            deck_type: _deck_type,
             cards,
             discard_pile: Vec::new(),
+            rng_manager,
         }
     }
 
@@ -104,13 +112,9 @@ impl Deck {
 
     /// Shuffle the deck
     pub fn shuffle(&mut self) {
-        use rand::seq::SliceRandom;
-        use rand::thread_rng;
-        
-        let mut rng = thread_rng();
-        let cards_vec: Vec<Card> = self.cards.drain(..).collect();
-        let shuffled: Vec<Card> = cards_vec.choose_multiple(&mut rng, cards_vec.len()).cloned().collect();
-        self.cards = shuffled.into();
+        let mut cards_vec: Vec<Card> = self.cards.drain(..).collect();
+        cards_vec.shuffle(self.rng_manager.borrow_mut().get_rng("DECK_SHUFFLE"));
+        self.cards = cards_vec.into();
     }
 
     /// Get the number of cards remaining in the deck
