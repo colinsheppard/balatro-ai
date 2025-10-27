@@ -25,9 +25,10 @@ pub fn handle_blind_select_phase(engine: &mut BalatroEngine) -> Result<(), Box<d
 /// Handle the Playing phase
 pub fn handle_playing_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
     display_playing_phase_state(engine.game_state());
-    display_playing_actions(engine.game_state());
+    let playing_actions = crate::actions::helpers::create_playing_actions(engine.game_state());
+    display_playing_actions(engine.game_state(), &playing_actions);
     let choice = get_user_input()?;
-    process_playing_action(engine, choice)?;
+    process_playing_action(engine, &playing_actions, choice)?;
     Ok(())
 }
 
@@ -109,21 +110,49 @@ fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Resul
 }
 
 /// Process Playing action (stub)
-fn process_playing_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Playing action {} selected (stub)", choice);
-    // TODO: Implement actual playing actions
-    match choice {
-        3 => {
-            println!("Playing hand...");
+fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, crate::actions::PlayingAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+    let (_action_num, action) = playing_actions.get(choice as usize)
+        .ok_or_else(|| format!("Invalid choice: {}", choice))?;
+    
+    match action {
+        crate::actions::PlayingAction::PlaySelectedCards => {
+            println!("Playing selected cards...");
+            let _score = engine.game_state_mut().play_hand().unwrap_or(0);
             engine.game_state_mut().phase = GamePhase::RoundEnd;
+            Ok(())
         }
-        4 => {
-            println!("Discarding hand...");
+        crate::actions::PlayingAction::DiscardSelectedCards => {
+            println!("Discarding selected cards...");
             engine.game_state_mut().phase = GamePhase::RoundEnd;
+            Ok(())
         }
-        _ => println!("Invalid playing choice: {}", choice),
+        crate::actions::PlayingAction::SelectCard(card_idx) => {
+            println!("Selecting card at index {}", card_idx);
+            engine.game_state_mut().hand.select_card(*card_idx);
+            Ok(())
+        }
+        crate::actions::PlayingAction::DeselectCard(card_idx) => {
+            println!("Deselecting card at index {}", card_idx);
+            engine.game_state_mut().hand.deselect_card(*card_idx);
+            Ok(())
+        }
+        crate::actions::PlayingAction::MoveRight(card_idx) => {
+            println!("Moving card {} right", card_idx);
+            let game_state = engine.game_state_mut();
+            if *card_idx < game_state.hand.len() - 1 {
+                // TODO: Implement card movement
+            }
+            Ok(())
+        }
+        crate::actions::PlayingAction::MoveLeft(card_idx) => {
+            println!("Moving card {} left", card_idx);
+            let game_state = engine.game_state_mut();
+            if *card_idx > 0 {
+                // TODO: Implement card movement
+            }
+            Ok(())
+        }
     }
-    Ok(())
 }
 
 /// Process RoundEnd action (stub)

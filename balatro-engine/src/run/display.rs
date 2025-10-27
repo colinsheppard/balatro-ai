@@ -82,9 +82,9 @@ pub fn display_playing_phase_state(game_state: &GameState) {
     for (i, card) in cards.iter().enumerate() {
         if selected_indices.contains(&i) {
             selected_line.push_str(&format!("{:<2} ", card));
-            unselected_line.push_str(&"    ");
+            unselected_line.push_str(&"   ");
         } else {
-            selected_line.push_str(&"    ");
+            selected_line.push_str(&"   ");
             unselected_line.push_str(&format!("{:<2} ", card));
         }
         indices_line.push_str(&format!("{:<2} ", i + 2));
@@ -127,10 +127,10 @@ pub fn display_blind_select_actions(game_state: &GameState) {
     println!("\nAvailable Actions:");
     
     if let Some(next_blind) = game_state.upcoming_blinds.get_next_upcoming_blind() {
-        println!("1. Play {} - Face the blind and try to beat it", next_blind.name);
+        println!("1. Play {} ", next_blind.name);
         
         if next_blind.can_skip() {
-            println!("2. Skip {} - Skip this blind (costs money)", next_blind.name);
+            println!("2. Skip {}", next_blind.name);
         }
     } else {
         println!("All blinds completed for this ante!");
@@ -139,13 +139,9 @@ pub fn display_blind_select_actions(game_state: &GameState) {
 }
 
 /// Display available Playing actions
-pub fn display_playing_actions(game_state: &crate::GameState) {
-    use crate::actions::helpers;
-    
+pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, crate::actions::PlayingAction)]) {
     let cards = game_state.hand.cards();
     let selected_indices: Vec<usize> = game_state.hand.selected_indices().iter().copied().collect();
-    
-    let actions = helpers::create_playing_actions(cards, &selected_indices);
     
     println!("\nAvailable Actions:");
     
@@ -156,16 +152,16 @@ pub fn display_playing_actions(game_state: &crate::GameState) {
                 println!("{}", action);
             }
             crate::actions::PlayingAction::SelectCard(card_idx) => {
-                println!("{}: Select {}", action_num, &cards[card_idx]);
+                println!("{}: Select {}", action_num, &cards[*card_idx]);
             }
             crate::actions::PlayingAction::DeselectCard(card_idx) => {
-                println!("{}: Deselect {}", action_num, &cards[card_idx]);
+                println!("{}: Deselect {}", action_num, &cards[*card_idx]);
             }
             crate::actions::PlayingAction::MoveRight(card_idx) => {
-                println!("{}: Move right {}", action_num, &cards[card_idx]);
+                println!("{}: Move right {}", action_num, &cards[*card_idx]);
             }
             crate::actions::PlayingAction::MoveLeft(card_idx) => {
-                println!("{}: Move left {}", action_num, &cards[card_idx]);
+                println!("{}: Move left {}", action_num, &cards[*card_idx]);
             }
         }
     }
