@@ -151,6 +151,8 @@ pub enum PlayingAction {
     DeselectCard(usize),    // Index in hand
     MoveRight(usize),       // Index in hand
     MoveLeft(usize),        // Index in hand
+    SortByRank,
+    SortBySuit,
 }
 
 impl Action for PlayingAction {
@@ -162,6 +164,8 @@ impl Action for PlayingAction {
             PlayingAction::DeselectCard(_) => 3,   // Will be overridden in display
             PlayingAction::MoveRight(_) => 4,      // Will be overridden in display
             PlayingAction::MoveLeft(_) => 5,       // Will be overridden in display
+            PlayingAction::SortByRank => 6,
+            PlayingAction::SortBySuit => 7,
         }
     }
     
@@ -173,6 +177,8 @@ impl Action for PlayingAction {
             PlayingAction::DeselectCard(_) => "Deselect card",
             PlayingAction::MoveRight(_) => "Move right",
             PlayingAction::MoveLeft(_) => "Move left",
+            PlayingAction::SortByRank => "Sort by rank",
+            PlayingAction::SortBySuit => "Sort by suit",
         }
     }
 }
@@ -190,7 +196,8 @@ impl PlayingAction {
     /// Get the card index for actions that involve a card
     fn card_index(&self) -> usize {
         match self {
-            PlayingAction::PlaySelectedCards | PlayingAction::DiscardSelectedCards => 0,
+            PlayingAction::PlaySelectedCards | PlayingAction::DiscardSelectedCards |
+            PlayingAction::SortByRank | PlayingAction::SortBySuit => 0,
             PlayingAction::SelectCard(idx) | 
             PlayingAction::DeselectCard(idx) | 
             PlayingAction::MoveRight(idx) | 
@@ -207,6 +214,12 @@ impl fmt::Display for PlayingAction {
             }
             PlayingAction::DiscardSelectedCards => {
                 write!(f, "1: Discard selected cards")
+            }
+            PlayingAction::SortByRank => {
+                write!(f, "Sort by rank")
+            }
+            PlayingAction::SortBySuit => {
+                write!(f, "Sort by suit")
             }
             _ => {
                 // For display, this will be completed by the caller
@@ -416,6 +429,13 @@ pub mod helpers {
                 action_index += 1;
             }
         }
+        
+        // Add sort actions
+        actions.push((action_index, PlayingAction::SortByRank));
+        action_index += 1;
+        
+        actions.push((action_index, PlayingAction::SortBySuit));
+        action_index += 1;
         
         actions
     }

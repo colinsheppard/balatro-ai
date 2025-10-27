@@ -83,6 +83,7 @@ impl GameState {
     pub fn clear_and_draw_hand(&mut self) -> GameResult<()> {
         self.hand.clear();
         self.draw_hand()?;
+        self.hand.sort_by_rank_desc();
         Ok(())
     }
 

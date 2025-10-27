@@ -138,18 +138,22 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
         }
         crate::actions::PlayingAction::MoveRight(card_idx) => {
             println!("Moving card {} right", card_idx);
-            let game_state = engine.game_state_mut();
-            if *card_idx < game_state.hand.len() - 1 {
-                // TODO: Implement card movement
-            }
+            engine.game_state_mut().hand.move_right(*card_idx)?;
             Ok(())
         }
         crate::actions::PlayingAction::MoveLeft(card_idx) => {
             println!("Moving card {} left", card_idx);
-            let game_state = engine.game_state_mut();
-            if *card_idx > 0 {
-                // TODO: Implement card movement
-            }
+            engine.game_state_mut().hand.move_left(*card_idx)?;
+            Ok(())
+        }
+        crate::actions::PlayingAction::SortByRank => {
+            println!("Sorting hand by rank...");
+            engine.game_state_mut().hand.sort_by_rank_desc();
+            Ok(())
+        }
+        crate::actions::PlayingAction::SortBySuit => {
+            println!("Sorting hand by suit...");
+            engine.game_state_mut().hand.sort_by_suit_then_rank();
             Ok(())
         }
     }

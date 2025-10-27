@@ -147,9 +147,17 @@ pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, c
     
     for (action_num, action) in actions {
         match action {
-            crate::actions::PlayingAction::PlaySelectedCards | 
+            crate::actions::PlayingAction::PlaySelectedCards => {
+                println!("{}: {}", action_num, action);
+            }
             crate::actions::PlayingAction::DiscardSelectedCards => {
-                println!("{}", action);
+                println!("{}: {}", action_num, action);
+            }
+            crate::actions::PlayingAction::SortByRank => {
+                println!("{}: {}", action_num, action);
+            }
+            crate::actions::PlayingAction::SortBySuit => {
+                println!("{}: {}", action_num, action);
             }
             crate::actions::PlayingAction::SelectCard(card_idx) => {
                 println!("{}: Select {}", action_num, &cards[*card_idx]);
@@ -162,6 +170,12 @@ pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, c
             }
             crate::actions::PlayingAction::MoveLeft(card_idx) => {
                 println!("{}: Move left {}", action_num, &cards[*card_idx]);
+            }
+            crate::actions::PlayingAction::SortByRank => {
+                println!("{}: Sort by rank", action_num);
+            }
+            crate::actions::PlayingAction::SortBySuit => {
+                println!("{}: Sort by suit", action_num);
             }
         }
     }

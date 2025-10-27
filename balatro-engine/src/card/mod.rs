@@ -16,7 +16,6 @@ pub enum Suit {
 /// Rank of a playing card
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Rank {
-    Ace = 1,
     Two = 2,
     Three = 3,
     Four = 4,
@@ -29,6 +28,7 @@ pub enum Rank {
     Jack = 11,
     Queen = 12,
     King = 13,
+    Ace = 14,
 }
 
 /// Card enhancements that modify scoring

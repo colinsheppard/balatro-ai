@@ -197,15 +197,41 @@ impl Hand {
     }
 
     /// Sort cards by rank in descending order (highest first)
+    /// Preserves selected state of cards after sorting
     pub fn sort_by_rank_desc(&mut self) {
+        // Track which cards are selected by their IDs (since positions will change)
+        let selected_ids: std::collections::HashSet<_> = self.selected_indices
+            .iter()
+            .map(|&idx| self.cards[idx].id)
+            .collect();
+        
+        // Sort the cards
         self.cards.sort_by(|a, b| b.rank.cmp(&a.rank));
         
-        // Clear selections since indices will change
-        self.clear_selections();
+        // Rebuild selected_indices based on card IDs
+        self.selected_indices = self.cards
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, card)| {
+                if selected_ids.contains(&card.id) {
+                    Some(idx)
+                } else {
+                    None
+                }
+            })
+            .collect();
     }
 
     /// Sort cards by suit, then by rank (descending)
+    /// Preserves selected state of cards after sorting
     pub fn sort_by_suit_then_rank(&mut self) {
+        // Track which cards are selected by their IDs (since positions will change)
+        let selected_ids: std::collections::HashSet<_> = self.selected_indices
+            .iter()
+            .map(|&idx| self.cards[idx].id)
+            .collect();
+        
+        // Sort the cards
         self.cards.sort_by(|a, b| {
             match a.suit.cmp(&b.suit) {
                 std::cmp::Ordering::Equal => b.rank.cmp(&a.rank),
@@ -213,8 +239,18 @@ impl Hand {
             }
         });
         
-        // Clear selections since indices will change
-        self.clear_selections();
+        // Rebuild selected_indices based on card IDs
+        self.selected_indices = self.cards
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, card)| {
+                if selected_ids.contains(&card.id) {
+                    Some(idx)
+                } else {
+                    None
+                }
+            })
+            .collect();
     }
 
     /// Get the total chip value of all cards in the hand
