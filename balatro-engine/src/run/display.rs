@@ -69,11 +69,31 @@ pub fn display_playing_phase_state(game_state: &GameState) {
     for (i, joker) in game_state.jokers.iter().enumerate() {
         println!("  {}: {:?}", i + 1, joker);
     }
-    println!("Hand:");
-    for (i, card) in game_state.hand.cards().iter().enumerate() {
-        let selected = if game_state.hand.selected_indices().contains(&i) { " [SELECTED]" } else { "" };
-        println!("  {}: {:?}{}", i + 1, card, selected);
+    
+    // Display hand in horizontal layout with selection info
+    let selected_indices: std::collections::HashSet<usize> = game_state.hand.selected_indices().iter().copied().collect();
+    let cards = game_state.hand.cards();
+    
+    // Collect cards by selection status, maintaining position
+    let mut selected_line =   String::from("selected:   ");
+    let mut unselected_line = String::from("unselected: ");
+    let mut indices_line =    String::from("to select:  ");
+    
+    for (i, card) in cards.iter().enumerate() {
+        if selected_indices.contains(&i) {
+            selected_line.push_str(&format!("{:<2} ", card));
+            unselected_line.push_str(&"    ");
+        } else {
+            selected_line.push_str(&"    ");
+            unselected_line.push_str(&format!("{:<2} ", card));
+        }
+        indices_line.push_str(&format!("{:<2} ", i));
     }
+    
+    println!("Hand:");
+    println!("{}", selected_line);
+    println!("{}", unselected_line);
+    println!("{}", indices_line);
 }
 
 /// Display RoundEnd phase specific state

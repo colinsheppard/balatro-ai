@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use std::fmt;
 
 /// Suit of a playing card
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -104,5 +105,47 @@ impl Card {
     /// Check if this card is an ace
     pub fn is_ace(&self) -> bool {
         self.rank == Rank::Ace
+    }
+}
+
+// Display implementation for Rank
+impl fmt::Display for Rank {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let rank_str = match self {
+            Rank::Ace => "A",
+            Rank::Two => "2",
+            Rank::Three => "3",
+            Rank::Four => "4",
+            Rank::Five => "5",
+            Rank::Six => "6",
+            Rank::Seven => "7",
+            Rank::Eight => "8",
+            Rank::Nine => "9",
+            Rank::Ten => "10",
+            Rank::Jack => "J",
+            Rank::Queen => "Q",
+            Rank::King => "K",
+        };
+        write!(f, "{}", rank_str)
+    }
+}
+
+// Display implementation for Suit with unicode and ANSI color codes
+impl fmt::Display for Suit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (symbol, color_code) = match self {
+            Suit::Hearts => ('♥', "\x1b[31m"),    // Red
+            Suit::Diamonds => ('♦', "\x1b[34m"),   // Blue
+            Suit::Clubs => ('♣', "\x1b[32m"),      // Green
+            Suit::Spades => ('♠', "\x1b[0m"),     // Default/White
+        };
+        write!(f, "{}{}{}", color_code, symbol, "\x1b[0m")
+    }
+}
+
+// Display implementation for Card
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}{}", self.rank, self.suit)
     }
 }
