@@ -25,7 +25,7 @@ pub fn handle_blind_select_phase(engine: &mut BalatroEngine) -> Result<(), Box<d
 /// Handle the Playing phase
 pub fn handle_playing_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
     display_playing_phase_state(engine.game_state());
-    display_playing_actions();
+    display_playing_actions(engine.game_state());
     let choice = get_user_input()?;
     process_playing_action(engine, choice)?;
     Ok(())

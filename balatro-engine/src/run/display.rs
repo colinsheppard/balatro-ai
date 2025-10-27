@@ -87,7 +87,7 @@ pub fn display_playing_phase_state(game_state: &GameState) {
             selected_line.push_str(&"    ");
             unselected_line.push_str(&format!("{:<2} ", card));
         }
-        indices_line.push_str(&format!("{:<2} ", i));
+        indices_line.push_str(&format!("{:<2} ", i + 2));
     }
     
     println!("Hand:");
@@ -139,14 +139,36 @@ pub fn display_blind_select_actions(game_state: &GameState) {
 }
 
 /// Display available Playing actions
-pub fn display_playing_actions() {
+pub fn display_playing_actions(game_state: &crate::GameState) {
+    use crate::actions::helpers;
+    
+    let cards = game_state.hand.cards();
+    let selected_indices: Vec<usize> = game_state.hand.selected_indices().iter().copied().collect();
+    
+    let actions = helpers::create_playing_actions(cards, &selected_indices);
+    
     println!("\nAvailable Actions:");
-    println!("1. Select Card");
-    println!("2. Deselect Card");
-    println!("3. Play Hand");
-    println!("4. Discard Hand");
-    println!("5. View Jokers");
-    println!("6. Use Consumable");
+    
+    for (action_num, action) in actions {
+        match action {
+            crate::actions::PlayingAction::PlaySelectedCards | 
+            crate::actions::PlayingAction::DiscardSelectedCards => {
+                println!("{}", action);
+            }
+            crate::actions::PlayingAction::SelectCard(card_idx) => {
+                println!("{}: Select {}", action_num, &cards[card_idx]);
+            }
+            crate::actions::PlayingAction::DeselectCard(card_idx) => {
+                println!("{}: Deselect {}", action_num, &cards[card_idx]);
+            }
+            crate::actions::PlayingAction::MoveRight(card_idx) => {
+                println!("{}: Move right {}", action_num, &cards[card_idx]);
+            }
+            crate::actions::PlayingAction::MoveLeft(card_idx) => {
+                println!("{}: Move left {}", action_num, &cards[card_idx]);
+            }
+        }
+    }
 }
 
 /// Display available RoundEnd actions

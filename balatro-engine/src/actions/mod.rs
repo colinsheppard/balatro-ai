@@ -145,41 +145,75 @@ impl fmt::Display for BlindAction {
 /// Actions available in the Playing phase
 #[derive(Debug, Clone)]
 pub enum PlayingAction {
-    SelectCard,
-    DeselectCard,
-    PlayHand,
-    DiscardHand,
-    ViewJokers,
-    UseConsumable,
+    PlaySelectedCards,
+    DiscardSelectedCards,
+    SelectCard(usize),      // Index in hand
+    DeselectCard(usize),    // Index in hand
+    MoveRight(usize),       // Index in hand
+    MoveLeft(usize),        // Index in hand
 }
 
 impl Action for PlayingAction {
     fn index(&self) -> u32 {
         match self {
-            PlayingAction::SelectCard => 1,
-            PlayingAction::DeselectCard => 2,
-            PlayingAction::PlayHand => 3,
-            PlayingAction::DiscardHand => 4,
-            PlayingAction::ViewJokers => 5,
-            PlayingAction::UseConsumable => 6,
+            PlayingAction::PlaySelectedCards => 0,
+            PlayingAction::DiscardSelectedCards => 1,
+            PlayingAction::SelectCard(_) => 2,      // Will be overridden in display
+            PlayingAction::DeselectCard(_) => 3,   // Will be overridden in display
+            PlayingAction::MoveRight(_) => 4,      // Will be overridden in display
+            PlayingAction::MoveLeft(_) => 5,       // Will be overridden in display
         }
     }
     
     fn description(&self) -> &str {
         match self {
-            PlayingAction::SelectCard => "Select Card",
-            PlayingAction::DeselectCard => "Deselect Card",
-            PlayingAction::PlayHand => "Play Hand",
-            PlayingAction::DiscardHand => "Discard Hand",
-            PlayingAction::ViewJokers => "View Jokers",
-            PlayingAction::UseConsumable => "Use Consumable",
+            PlayingAction::PlaySelectedCards => "Play selected cards",
+            PlayingAction::DiscardSelectedCards => "Discard selected cards",
+            PlayingAction::SelectCard(_) => "Select card",
+            PlayingAction::DeselectCard(_) => "Deselect card",
+            PlayingAction::MoveRight(_) => "Move right",
+            PlayingAction::MoveLeft(_) => "Move left",
+        }
+    }
+}
+
+impl PlayingAction {
+    /// Get the actual index for display (calculated dynamically)
+    pub fn display_index(&self, start_index: u32) -> u32 {
+        match self {
+            PlayingAction::PlaySelectedCards => start_index,
+            PlayingAction::DiscardSelectedCards => start_index + 1,
+            _ => start_index + 2 + self.card_index() as u32,
+        }
+    }
+    
+    /// Get the card index for actions that involve a card
+    fn card_index(&self) -> usize {
+        match self {
+            PlayingAction::PlaySelectedCards | PlayingAction::DiscardSelectedCards => 0,
+            PlayingAction::SelectCard(idx) | 
+            PlayingAction::DeselectCard(idx) | 
+            PlayingAction::MoveRight(idx) | 
+            PlayingAction::MoveLeft(idx) => *idx,
         }
     }
 }
 
 impl fmt::Display for PlayingAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.index(), self.description())
+        match self {
+            PlayingAction::PlaySelectedCards => {
+                write!(f, "0: Play selected cards")
+            }
+            PlayingAction::DiscardSelectedCards => {
+                write!(f, "1: Discard selected cards")
+            }
+            _ => {
+                // For display, this will be completed by the caller
+                // when they have access to the card
+                write!(f, "{}", self.description())
+            }
+        }
     }
 }
 
@@ -336,16 +370,72 @@ pub mod helpers {
         ]
     }
     
-    /// Create all playing actions
-    pub fn create_playing_actions() -> Vec<PlayingAction> {
-        vec![
-            PlayingAction::SelectCard,
-            PlayingAction::DeselectCard,
-            PlayingAction::PlayHand,
-            PlayingAction::DiscardHand,
-            PlayingAction::ViewJokers,
-            PlayingAction::UseConsumable,
-        ]
+    /// Create all playing actions based on current hand state
+    pub fn create_playing_actions(cards: &[crate::card::Card], selected_indices: &[usize]) -> Vec<(u32, PlayingAction)> {
+        use std::collections::HashSet;
+        
+        let mut actions = Vec::new();
+        let selected_set: HashSet<usize> = selected_indices.iter().copied().collect();
+        
+        let mut action_index = 0u32;
+        
+        // First two actions are always the same
+        actions.push((action_index, PlayingAction::PlaySelectedCards));
+        action_index += 1;
+        
+        actions.push((action_index, PlayingAction::DiscardSelectedCards));
+        action_index += 1;
+        
+        // Generate actions for each card in order
+        for (i, _card) in cards.iter().enumerate() {
+            let is_selected = selected_set.contains(&i);
+            
+            if !is_selected {
+                // Not selected: offer to select
+                actions.push((action_index, PlayingAction::SelectCard(i)));
+                action_index += 1;
+            } else {
+                // Selected: offer to deselect
+                actions.push((action_index, PlayingAction::DeselectCard(i)));
+                action_index += 1;
+            }
+        }
+            
+        for (i, _card) in cards.iter().enumerate() {
+            // Move right (if not last card)
+            if i < cards.len() - 1 {
+                actions.push((action_index, PlayingAction::MoveRight(i)));
+                action_index += 1;
+            }
+        }
+        for (i, _card) in cards.iter().enumerate() {
+            // Move left (if not first card)
+            if i > 0 {
+                actions.push((action_index, PlayingAction::MoveLeft(i)));
+                action_index += 1;
+            }
+        }
+        
+        actions
+    }
+    
+    /// Format a playing action with its card for display
+    pub fn format_playing_action(action: &PlayingAction, card: &crate::card::Card, action_num: u32) -> String {
+        match action {
+            PlayingAction::SelectCard(_) => {
+                format!("{}: Select {}", action_num, card)
+            }
+            PlayingAction::DeselectCard(_) => {
+                format!("{}: Deselect {}", action_num, card)
+            }
+            PlayingAction::MoveRight(_) => {
+                format!("{}: Move {} right", action_num, card)
+            }
+            PlayingAction::MoveLeft(_) => {
+                format!("{}: Move {} left", action_num, card)
+            }
+            _ => format!("{}: {}", action_num, action.description())
+        }
     }
     
     /// Create all round end actions
