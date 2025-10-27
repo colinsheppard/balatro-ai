@@ -1,8 +1,10 @@
 //! Integration tests for the Balatro engine
 
-use crate::{game, BalatroEngine, GamePhase};
-use crate::joker::{JokerManager, JokerInstance, JokerRarity};
+use crate::{BalatroEngine, GamePhase, InputSource};
+use crate::joker::JokerManager;
 use crate::deck::DeckType;
+use crate::run::{handle_initial_menu, initialize_input_source, run_game_loop};
+use std::env;
 
 #[test]
 fn test_engine_creation_and_initialization() {
@@ -27,7 +29,7 @@ fn test_full_game_cycle() {
     let mut engine = BalatroEngine::new(12345);
     engine.start_new_default_run().unwrap();
     
-    let mut game_state = engine.game_state_mut();
+    let game_state = engine.game_state_mut();
     
     // Draw initial hand
     game_state.clear_and_draw_hand().unwrap();
@@ -60,7 +62,7 @@ fn test_joker_interaction_with_game_state() {
     let mut engine = BalatroEngine::new(12345);
     engine.start_new_default_run().unwrap();
     
-    let mut game_state = engine.game_state_mut();
+    let game_state = engine.game_state_mut();
     
     // Add a joker using TOML-based system
     let toml_content = r#"
@@ -101,7 +103,7 @@ fn test_deck_interaction_with_game_state() {
     let mut engine = BalatroEngine::new(12345);
     engine.start_new_default_run().unwrap();
     
-    let mut game_state = engine.game_state_mut();
+    let game_state = engine.game_state_mut();
     
     // Change deck type
     game_state.deck = crate::deck::Deck::new(DeckType::Blue);
@@ -117,7 +119,7 @@ fn test_multiple_rounds() {
     let mut engine = BalatroEngine::new(12345);
     engine.start_new_default_run().unwrap();
     
-    let mut game_state = engine.game_state_mut();
+    let game_state = engine.game_state_mut();
     
     // Play multiple rounds
     for round in 1..=3 {
@@ -141,7 +143,7 @@ fn test_engine_state_persistence() {
     engine.start_new_default_run().unwrap();
     
     // Modify game state
-    let mut game_state = engine.game_state_mut();
+    let game_state = engine.game_state_mut();
     game_state.money = 100;
     game_state.ante = 3;
     
@@ -149,4 +151,27 @@ fn test_engine_state_persistence() {
     let game_state = engine.game_state();
     assert_eq!(game_state.money, 100);
     assert_eq!(game_state.ante, 3);
+}
+
+#[test]
+fn test_integration_with_main_rs_via_env() {
+    // Set BALATRO_INPUT_FILE programmatically - main.rs will read this
+    env::set_var("BALATRO_INPUT_FILE", "test_inputs/quick_start.txt");
+    
+    // Use InputSource's read_all_commands helper method
+    let input_file = env::var("BALATRO_INPUT_FILE").unwrap();
+    initialize_input_source();
+    let commands = InputSource::read_all_commands(&input_file).unwrap();
+    
+    println!("Commands read from {}: {:?}", input_file, commands);
+    
+    // This demonstrates that when BALATRO_INPUT_FILE is set,
+    // main.rs will use InputSource::File variant to read these commands
+    // in the initialize_input_source() -> InputSource::new() function
+
+    let mut engine = BalatroEngine::new(12345);
+    engine.start_new_default_run().unwrap();
+    handle_initial_menu(&mut engine).unwrap();
+    run_game_loop(&mut engine).unwrap();
+    
 }

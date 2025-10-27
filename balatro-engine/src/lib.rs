@@ -13,6 +13,8 @@ pub mod error;
 pub mod stakes;
 pub mod hand;
 pub mod actions;
+pub mod input;
+pub mod run;
 
 // Re-export commonly used types
 pub use card::*;
@@ -25,6 +27,7 @@ pub use error::*;
 pub use stakes::*;
 pub use hand::*;
 pub use actions::*;
+pub use input::*;
 
 /// The main game engine that orchestrates all game systems
 pub struct BalatroEngine {
