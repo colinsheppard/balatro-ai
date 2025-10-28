@@ -171,7 +171,7 @@ impl GameState {
         let mut hand_score = HandScore::new();
 
         // Phase 1: Pre-scoring
-        hand_score = self.apply_pre_scoring(hand_score, &selected_cards)?;
+        self.apply_pre_scoring(&selected_cards)?;
 
         // Phase 2: Played Hand Scoring
         hand_score = self.apply_played_hand_scoring(hand_score, &selected_cards)?;
@@ -194,11 +194,19 @@ impl GameState {
 
     /// Phase 1: Pre-scoring
     /// Apply pre-scoring effects before the hand is evaluated
-    fn apply_pre_scoring(&self, hand_score: HandScore, _cards: &[Card]) -> GameResult<HandScore> {
-        // TODO: Implement pre-scoring effects
-        // This includes effects that modify the hand before evaluation
-        // Examples: cards that change suit/rank, effects that modify hand composition
-        Ok(hand_score)
+    fn apply_pre_scoring(&mut self, _cards: &[Card]) -> GameResult<()> {
+        // Iterate through each joker and apply pre-scoring effects
+        // We need to use unsafe here because we're borrowing self mutably
+        // while also accessing self.jokers immutably. This is safe because
+        // joker pre-scoring effects don't modify the jokers vector.
+        let num_jokers = self.jokers.len();
+        for idx in 0..num_jokers {
+            let joker: *const _ = &self.jokers[idx];
+            unsafe {
+                (*joker).apply_joker_pre_scoring_effects(self)?;
+            }
+        }
+        Ok(())
     }
 
     /// Phase 2: Played Hand Scoring

@@ -285,6 +285,14 @@ impl JokerInstance {
         // For now, return base values
         Ok((0, 1.0))
     }
+
+    /// Apply pre-scoring effects that modify game state before hand evaluation
+    pub fn apply_joker_pre_scoring_effects(&self, _game_state: &mut crate::game::GameState) -> GameResult<()> {
+        // TODO: Implement joker-specific pre-scoring effects
+        // This will check the joker's configuration and apply appropriate effects
+        // Examples: modify cards in hand, change suit/rank, add/remove cards, etc.
+        Ok(())
+    }
 }
 
 impl std::fmt::Display for JokerInstance {
