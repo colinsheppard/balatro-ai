@@ -5,6 +5,7 @@ This directory contains automated testing tools for the Balatro game engine, all
 ## Features
 
 - **Input Piping**: Automatically detects and uses piped input or input files
+- **Hybrid Input Mode**: Start with file input, then switch to interactive mode when the file is exhausted
 - **Environment Variable Support**: Use `BALATRO_INPUT_FILE` to specify input files
 - **Session Recording**: Record your manual gameplay sessions for later replay
 - **Multiple Test Scenarios**: Pre-configured test cases for different game situations
@@ -33,6 +34,17 @@ Run a specific test:
 
 ```bash
 BALATRO_INPUT_FILE=input/quick_start.txt cargo run --release
+```
+
+**Hybrid Input Mode**: When using `BALATRO_INPUT_FILE`, the game will read from the file until it reaches the end of the file, then automatically switch to interactive mode. This allows you to fast-forward to a specific game state and then take over manually.
+
+Example:
+```bash
+# Create a partial input file that sets up the game
+echo -e "24\n1\n1" > input/partial.txt
+
+# Run with hybrid input: file first, then interactive
+BALATRO_INPUT_FILE=input/partial.txt cargo run --release
 ```
 
 ### Method 3: Using Input Piping

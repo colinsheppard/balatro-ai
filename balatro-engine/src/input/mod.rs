@@ -10,6 +10,8 @@ pub enum InputSource {
     InteractiveRecording(File), // Interactive mode with recording
     File(BufReader<File>),
     FileRecording(BufReader<File>, File), // File input with recording
+    FileThenInteractive(BufReader<File>, bool), // File input that falls back to interactive
+    FileThenInteractiveRecording(BufReader<File>, File, bool), // File then interactive with recording
     Stdin(BufReader<io::Stdin>),
     StdinRecording(BufReader<io::Stdin>, File), // Stdin input with recording
 }
@@ -28,9 +30,11 @@ impl InputSource {
             if recording_enabled {
                 // Create recording file and wrap the input file reader
                 let recording_file = Self::create_recording_file_internal();
-                Self::FileRecording(BufReader::new(file), recording_file)
+                // Always enable fallback to interactive for file-based input
+                Self::FileThenInteractiveRecording(BufReader::new(file), recording_file, false)
             } else {
-                Self::File(BufReader::new(file))
+                // Always enable fallback to interactive for file-based input
+                Self::FileThenInteractive(BufReader::new(file), false)
             }
         } else {
             // Check if stdin has data (for piping)
@@ -137,6 +141,67 @@ impl InputSource {
                 file.flush()?;
                 
                 Ok(line)
+            }
+            Self::FileThenInteractive(reader, eof_reached) => {
+                if *eof_reached {
+                    // File is exhausted, fall back to interactive input
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input)?;
+                    Ok(input)
+                } else {
+                    // Try to read from file
+                    let mut line = String::new();
+                    let bytes_read = reader.read_line(&mut line)?;
+                    
+                    if bytes_read == 0 {
+                        // EOF reached, switch to interactive mode
+                        *eof_reached = true;
+                        println!("\n--- File input exhausted, switching to interactive mode ---");
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input)?;
+                        Ok(input)
+                    } else {
+                        Ok(line)
+                    }
+                }
+            }
+            Self::FileThenInteractiveRecording(reader, recording_file, eof_reached) => {
+                if *eof_reached {
+                    // File is exhausted, fall back to interactive input with recording
+                    let mut input = String::new();
+                    io::stdin().read_line(&mut input)?;
+                    
+                    // Record the input to file
+                    writeln!(recording_file, "{}", input.trim())?;
+                    recording_file.flush()?;
+                    
+                    Ok(input)
+                } else {
+                    // Try to read from file
+                    let mut line = String::new();
+                    let bytes_read = reader.read_line(&mut line)?;
+                    
+                    if bytes_read == 0 {
+                        // EOF reached, switch to interactive mode with recording
+                        *eof_reached = true;
+                        println!("\n--- File input exhausted, switching to interactive mode ---");
+                        
+                        let mut input = String::new();
+                        io::stdin().read_line(&mut input)?;
+                        
+                        // Record the input to file
+                        writeln!(recording_file, "{}", input.trim())?;
+                        recording_file.flush()?;
+                        
+                        Ok(input)
+                    } else {
+                        // Record the file input to recording file
+                        writeln!(recording_file, "{}", line.trim())?;
+                        recording_file.flush()?;
+                        
+                        Ok(line)
+                    }
+                }
             }
             Self::Stdin(reader) => {
                 let mut line = String::new();

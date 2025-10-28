@@ -12,6 +12,14 @@ pub fn get_user_input() -> Result<u32, Box<dyn std::error::Error>> {
                     print!("\nEnter your choice (number) or 'quit' to exit: ");
                     io::stdout().flush()?;
                 }
+                InputSource::FileThenInteractive(_, eof_reached) |
+                InputSource::FileThenInteractiveRecording(_, _, eof_reached) => {
+                    if *eof_reached {
+                        print!("\nEnter your choice (number) or 'quit' to exit: ");
+                        io::stdout().flush()?;
+                    }
+                    // Don't print prompt when reading from file
+                }
                 _ => {
                     // For automated input, don't print prompt
                 }
@@ -35,7 +43,14 @@ pub fn get_user_input() -> Result<u32, Box<dyn std::error::Error>> {
                 match trimmed.parse::<u32>() {
                     Ok(choice) => return Ok(choice),
                     Err(_) => {
-                        if matches!(source, InputSource::Interactive | InputSource::InteractiveRecording(_)) {
+                        let in_interactive_mode = match source {
+                            InputSource::Interactive | InputSource::InteractiveRecording(_) => true,
+                            InputSource::FileThenInteractive(_, eof_reached) |
+                            InputSource::FileThenInteractiveRecording(_, _, eof_reached) => *eof_reached,
+                            _ => false,
+                        };
+                        
+                        if in_interactive_mode {
                             println!("Invalid input. Please enter a number or 'quit' to exit.");
                             continue;
                         } else {
