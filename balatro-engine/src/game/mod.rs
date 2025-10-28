@@ -3,11 +3,9 @@
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::card::{Card, Enhancement, Edition, Seal};
 use crate::hand::Hand;
 use crate::deck::{Deck, DeckType};
 use crate::joker::JokerInstance;
-use crate::joker::config::{JokerCondition, ActionType};
 use crate::stakes::{Stake, StakeLevel};
 use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor};
 use crate::consumable::Consumable;
@@ -25,33 +23,6 @@ pub enum GamePhase {
 }
 
 // Removed tuple structs - now using primitive types directly
-
-/// Hand score tracking
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct HandScore {
-    pub chip_score: i32,
-    pub mult_score: f32,
-}
-
-impl HandScore {
-    pub fn new() -> Self {
-        Self {
-            chip_score: 0,
-            mult_score: 1.0,
-        }
-    }
-
-    /// Get the final score by multiplying chips by mult
-    pub fn final_score(&self) -> f32 {
-        self.chip_score as f32 * self.mult_score
-    }
-}
-
-impl Default for HandScore {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 /// Main game state
 #[derive(Debug, Clone)]
@@ -161,25 +132,9 @@ impl GameState {
 
     /// Play a hand of cards
     pub fn play_hand(&mut self) -> GameResult<i32> {
-        if self.hand.selected_indices().is_empty() {
-            return Err(GameError::InvalidGameState("Cannot play empty hand".to_string()));
-        }
-
-        // Get the selected cards before removing them
-        let selected_cards: Vec<Card> = self.hand.selected_cards().into_iter().cloned().collect();
-
-        // Phase 1: Pre-scoring
-        self.apply_pre_scoring(&selected_cards)?;
-
-        // Phase 2: Played Hand Scoring
-        let mut hand_score = self.apply_played_hand_scoring(&selected_cards)?;
-
-        // Phase 3: Effects in Hand
-        hand_score = self.apply_effects_in_hand(hand_score, &selected_cards)?;
-
-        // Phase 4: Joker Scoring
-        hand_score = self.apply_joker_scoring(hand_score, &selected_cards)?;
-
+        // Calculate the hand score using the scoring module
+        let hand_score = crate::scoring::calculate_hand_score(self)?;
+        
         // Calculate final score
         let final_score = hand_score.final_score() as i32;
         self.score = final_score;
@@ -188,186 +143,6 @@ impl GameState {
         self.hand.discard_selected_cards(&mut self.deck)?;
 
         Ok(final_score)
-    }
-
-    /// Phase 1: Pre-scoring
-    /// Apply pre-scoring effects before the hand is evaluated
-    fn apply_pre_scoring(&mut self, _cards: &[Card]) -> GameResult<()> {
-        // Iterate through each joker and apply pre-scoring effects
-        // We need to use unsafe here because we're borrowing self mutably
-        // while also accessing self.jokers immutably. This is safe because
-        // joker pre-scoring effects don't modify the jokers vector.
-        let num_jokers = self.jokers.len();
-        for idx in 0..num_jokers {
-            let joker: *const _ = &self.jokers[idx];
-            unsafe {
-                (*joker).apply_joker_pre_scoring_effects(self)?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Phase 2: Played Hand Scoring
-    /// Evaluate each card in the selected hand
-    fn apply_played_hand_scoring(&mut self, cards: &[Card]) -> GameResult<HandScore> {
-        let mut hand_score = HandScore::new();
-        // Iterate through each card in the selected hand
-        for card in cards {
-            // Count retriggers before scoring the card
-            let retrigger_count = self.count_retriggers(card)?;
-
-            // Apply retriggers
-            for _ in 0..retrigger_count {
-                hand_score = self.score_card(card, hand_score)?;
-            }
-        }
-        Ok(hand_score)
-    }
-
-    /// Score a single card, applying A through F
-    fn score_card(&mut self, card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
-        // A - Add Base Card Chips
-        hand_score.chip_score += card.chip_value();
-
-        // B - Apply Enhanced Card Effects
-        hand_score = self.apply_enhanced_card_effects(card, hand_score)?;
-
-        // C - Trigger Card Editions
-        hand_score = self.apply_card_edition(card, hand_score)?;
-
-        // D - Trigger Joker Effects (per_card effects)
-        hand_score = self.apply_per_card_joker_effects(card, hand_score)?;
-
-        // E - Retriggers are handled by calling function
-
-        // F - Gold Seal: if card has gold seal, give $3
-        if let Some(Seal::Gold) = card.seal {
-            self.money += 3;
-        }
-
-        Ok(hand_score)
-    }
-
-    /// Apply enhanced card effects (Step B)
-    fn apply_enhanced_card_effects(&self, card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
-        if let Some(enhancement) = &card.enhancement {
-            match enhancement {
-                Enhancement::Bonus => {
-                    hand_score.chip_score += 30;
-                }
-                Enhancement::Mult => {
-                    hand_score.mult_score += 4;
-                }
-                Enhancement::Wild => {
-                    // Has no impact on card score
-                }
-                Enhancement::Glass => {
-                    hand_score.mult_score *= 2;
-                }
-                Enhancement::Steel => {
-                    // Has no impact on card score 
-                }
-                Enhancement::Stone => {
-                    hand_score.chip_score += 50;
-                }
-                Enhancement::Gold => {
-                    // Has no impact on card score 
-                }
-                Enhancement::Lucky => {
-                    // TODO: Implement lucky enhancement
-                }
-            }
-        }
-        Ok(hand_score)
-    }
-
-    /// Apply card edition effects (Step C)
-    fn apply_card_edition(&self, card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
-        match card.edition {
-            Edition::Foil => {
-                hand_score.chip_score += 50;
-            }
-            Edition::Holographic => {
-                hand_score.mult_score += 10.0;
-            }
-            Edition::Polychrome => {
-                hand_score.mult_score *= 1.5;
-            }
-            Edition::Negative => {
-                // TODO: Implement negative edition effects
-            }
-            Edition::Base => {
-                // No effects for base edition
-            }
-        }
-        Ok(hand_score)
-    }
-
-    /// Apply per_card joker effects (Step D)
-    fn apply_per_card_joker_effects(&self, card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
-        let card_refs: Vec<&Card> = vec![card];
-        
-        for joker in &self.jokers {
-            // Check if this joker has a conditional effect that is per_card
-            if let Some(JokerCondition { .. }) = &joker.definition.effect.condition {
-                if joker.definition.effect.per_card {
-                    let (chip_mod, mult_mod) = joker.apply_effects(&card_refs)?;
-                    hand_score.chip_score += chip_mod;
-                    hand_score.mult_score *= mult_mod;
-                }
-            }
-        }
-        
-        Ok(hand_score)
-    }
-
-    /// Count the number of retriggers for a card
-    fn count_retriggers(&self, card: &Card) -> GameResult<usize> {
-        let mut retrigger_count = 0;
-
-        // Check if card has red seal
-        if let Some(Seal::Red) = card.seal {
-            retrigger_count += 1;
-        }
-
-        // Check jokers for retrigger effects
-        for joker in &self.jokers {
-            if let Some(action) = &joker.definition.effect.action {
-                if matches!(action.action_type, ActionType::Retrigger) {
-                    // TODO: Check if joker condition is met for this card
-                    // For now, count all retrigger jokers
-                    retrigger_count += 1;
-                }
-            }
-        }
-
-        Ok(retrigger_count)
-    }
-
-    /// Phase 3: Effects in Hand
-    /// Apply effects from cards in the hand
-    fn apply_effects_in_hand(&self, hand_score: HandScore, _cards: &[Card]) -> GameResult<HandScore> {
-        // TODO: Implement card effects
-        // This includes effects from card enhancements, editions, seals
-        // Cards can modify chips, mult, or trigger special effects
-        Ok(hand_score)
-    }
-
-    /// Phase 4: Joker Scoring
-    /// Apply effects from active jokers
-    fn apply_joker_scoring(&self, mut hand_score: HandScore, cards: &[Card]) -> GameResult<HandScore> {
-        // Convert &[Card] to Vec<&Card> for joker compatibility
-        let card_refs: Vec<&Card> = cards.iter().collect();
-        
-        for joker in &self.jokers {
-            // TODO: Implement full joker effect application
-            // For now, apply basic joker effects
-            let (chip_mod, mult_mod) = joker.apply_effects(&card_refs)?;
-            hand_score.chip_score += chip_mod;
-            hand_score.mult_score *= mult_mod;
-        }
-        
-        Ok(hand_score)
     }
 
     /// End the current round

@@ -19,6 +19,7 @@ pub mod actions;
 pub mod input;
 pub mod run;
 pub mod rng;
+pub mod scoring;
 
 // Re-export commonly used types
 pub use card::*;

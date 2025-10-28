@@ -139,6 +139,19 @@ impl Hand {
             .collect()
     }
 
+    /// Get unselected cards in order (left to right)
+    pub fn get_unselected_cards(&self) -> Vec<&Card> {
+        let selected_indices_set: std::collections::HashSet<usize> = 
+            self.selected_indices.iter().copied().collect();
+        
+        self.cards
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| !selected_indices_set.contains(idx))
+            .map(|(_, card)| card)
+            .collect()
+    }
+
     /// Check if a card at the given index is selected
     pub fn is_selected(&self, index: usize) -> bool {
         self.selected_indices.contains(&index)
