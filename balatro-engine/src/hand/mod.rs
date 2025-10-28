@@ -139,6 +139,10 @@ impl Hand {
             .collect()
     }
 
+    pub fn selected_cards_mut(&self) -> Vec<Card> {
+        self.selected_cards().into_iter().cloned().collect()
+    }
+
     /// Get unselected cards in order (left to right)
     pub fn get_unselected_cards(&self) -> Vec<&Card> {
         let selected_indices_set: std::collections::HashSet<usize> = 

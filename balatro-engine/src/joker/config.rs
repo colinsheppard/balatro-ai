@@ -164,6 +164,8 @@ pub enum ActionType {
     MultiplyScore,
     #[serde(rename = "retrigger")]
     Retrigger,
+    #[serde(rename = "retrigger_in_hand")]
+    RetriggerInHand,
     #[serde(rename = "calculate")]
     Calculate,
     #[serde(rename = "special")]
@@ -279,15 +281,28 @@ impl JokerInstance {
         self.stickers.contains(&sticker)
     }
 
+    /// Apply this joker's effects to a card
+    pub fn apply_per_card_effects(&self, card: crate::card::Card) -> GameResult<(i32, f32)> {
+        // This will be implemented with the full effect system
+        // For now, return base values
+        Ok((0, 1.0))
+    }
+
     /// Apply this joker's effects to a hand
-    pub fn apply_effects(&self, cards: &Vec<&crate::card::Card>) -> GameResult<(i32, f32)> {
+    pub fn apply_played_hand_effects(&self, cards: Vec<crate::card::Card>) -> GameResult<(i32, f32)> {
+        // This will be implemented with the full effect system
+        // For now, return base values
+        Ok((0, 1.0))
+    }
+
+    pub fn apply_in_hand_effects(&self, cards: Vec<crate::card::Card>) -> GameResult<(i32, f32)> {
         // This will be implemented with the full effect system
         // For now, return base values
         Ok((0, 1.0))
     }
 
     /// Apply pre-scoring effects that modify game state before hand evaluation
-    pub fn apply_joker_pre_scoring_effects(&self, _game_state: &mut crate::game::GameState) -> GameResult<()> {
+    pub fn apply_pre_scoring_effects(&self, _game_state: &mut crate::game::GameState) -> GameResult<()> {
         // TODO: Implement joker-specific pre-scoring effects
         // This will check the joker's configuration and apply appropriate effects
         // Examples: modify cards in hand, change suit/rank, add/remove cards, etc.
