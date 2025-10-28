@@ -56,7 +56,7 @@ fn test_deck_discarding() {
     deck.borrow_mut().discard(card.clone());
     assert_eq!(deck.borrow().discard_pile.len(), 1);
     // Note: discard_pile now contains Rc<RefCell<Card>>, so we need to compare the inner values
-    assert_eq!(deck.borrow().discard_pile[0].borrow().id, card.id);
+    assert_eq!(deck.borrow().discard_pile[0].borrow().id, card.borrow().id);
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn test_standard_deck_composition() {
     
     // Count all cards
     while let Some(card) = deck.borrow_mut().draw().unwrap() {
-        match card.suit {
+        match card.borrow().suit {
             Suit::Hearts => suit_counts[0] += 1,
             Suit::Diamonds => suit_counts[1] += 1,
             Suit::Clubs => suit_counts[2] += 1,
@@ -129,7 +129,7 @@ fn test_standard_deck_composition() {
         }
         
         // Rank values are 2-14, array indices should be 0-12
-        rank_counts[(card.rank as usize - 2)] += 1;
+        rank_counts[(card.borrow().rank as usize - 2)] += 1;
     }
     
     // Check we have 13 cards of each suit

@@ -3,8 +3,9 @@
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
 use std::cell::RefCell;
+use crate::SharedRngManager;
 use crate::hand::Hand;
-use crate::deck::{Deck, DeckType};
+use crate::deck::{Deck, DeckType, SharedDeck};
 use crate::joker::JokerInstance;
 use crate::planet::Planets;
 use crate::stakes::{Stake, StakeLevel};
@@ -34,7 +35,7 @@ pub struct GameState {
     pub hand_size: usize,
     pub money: i32,
     pub score: i32,
-    pub deck: Rc<RefCell<Deck>>,
+    pub deck: SharedDeck,
     pub stake: Stake,
     pub jokers: Vec<JokerInstance>,
     pub hand: Hand,
@@ -46,7 +47,7 @@ pub struct GameState {
 
 impl GameState {
     /// Create a new game state
-    pub fn new(rng_manager: Rc<RefCell<GameRngManager>>) -> Self {
+    pub fn new(rng_manager: SharedRngManager) -> Self {
         let stake = Stake::new(StakeLevel::White);
         let processor = BlindProcessor::new().unwrap_or_else(|_| {
             // Fallback processor if CSV loading fails
@@ -82,7 +83,7 @@ impl GameState {
     }
 
     /// Create a new game state with custom settings
-    pub fn new_with_settings(deck_type: DeckType, stake_level: StakeLevel, rng_manager: Rc<RefCell<GameRngManager>>) -> Self {
+    pub fn new_with_settings(deck_type: DeckType, stake_level: StakeLevel, rng_manager: SharedRngManager) -> Self {
         let stake = Stake::new(stake_level);
         let processor = BlindProcessor::new().unwrap_or_else(|_| {
             panic!("Failed to initialize BlindProcessor - CSV file not found or invalid");

@@ -1,14 +1,18 @@
 //! Hand management system for Balatro game engine
 
 use serde::{Deserialize, Serialize};
-use crate::Deck;
+use std::rc::Rc;
+use std::cell::RefCell;
+use crate::{Deck, SharedCard};
 use crate::card::{Card, Suit, Rank};
 use crate::error::{GameError, GameResult};
 
 /// A playing hand with advanced card management capabilities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+#[derive(Serialize)]
 pub struct Hand {
-    cards: Vec<Card>,
+    #[serde(skip)]
+    cards: Vec<SharedCard>,
     selected_indices: Vec<usize>,
 }
 
@@ -23,6 +27,17 @@ impl Hand {
 
     /// Create a hand with the given cards
     pub fn with_cards(cards: Vec<Card>) -> Self {
+        let shared_cards: Vec<SharedCard> = cards.into_iter()
+            .map(|card| Rc::new(RefCell::new(card)))
+            .collect();
+        Self {
+            cards: shared_cards,
+            selected_indices: Vec::new(),
+        }
+    }
+
+    /// Create a hand with the given shared cards
+    pub fn with_shared_cards(cards: Vec<SharedCard>) -> Self {
         Self {
             cards,
             selected_indices: Vec::new(),
@@ -39,18 +54,18 @@ impl Hand {
         self.cards.is_empty()
     }
 
-    /// Get a card by index
-    pub fn get(&self, index: usize) -> Option<&Card> {
+    /// Get a shared card by index
+    pub fn get(&self, index: usize) -> Option<&SharedCard> {
         self.cards.get(index)
     }
 
-    /// Get a mutable reference to a card by index
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut Card> {
+    /// Get a mutable reference to a shared card by index
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut SharedCard> {
         self.cards.get_mut(index)
     }
 
     /// Add a card to the hand
-    pub fn add_card(&mut self, card: Card) {
+    pub fn add_card(&mut self, card: SharedCard) {
         self.cards.push(card);
     }
 
@@ -73,7 +88,7 @@ impl Hand {
 
 
     /// Remove a card by index and return it
-    pub fn remove_card(&mut self, index: usize) -> GameResult<Card> {
+    pub fn remove_card(&mut self, index: usize) -> GameResult<SharedCard> {
         if index >= self.cards.len() {
             return Err(GameError::InvalidGameState(format!("Index {} out of bounds for hand of size {}", index, self.cards.len())));
         }
@@ -92,7 +107,7 @@ impl Hand {
     }
 
     /// Remove multiple cards by indices (in reverse order to maintain indices)
-    pub fn remove_selected_cards(&mut self) -> GameResult<Vec<Card>> {
+    pub fn remove_selected_cards(&mut self) -> GameResult<Vec<SharedCard>> {
         if self.selected_indices.is_empty() {
             return Ok(Vec::new());
         }
@@ -118,13 +133,8 @@ impl Hand {
     }
 
     /// Get all cards as a slice
-    pub fn cards(&self) -> &[Card] {
+    pub fn cards(&self) -> &[SharedCard] {
         &self.cards
-    }
-
-    /// Get all cards as a mutable slice
-    pub fn cards_mut(&mut self) -> &mut [Card] {
-        &mut self.cards
     }
 
     /// Get all selected card indices
@@ -133,18 +143,29 @@ impl Hand {
     }
 
     /// Get selected cards
-    pub fn selected_cards(&self) -> Vec<&Card> {
+    pub fn selected_cards(&self) -> Vec<&SharedCard> {
         self.selected_indices.iter()
             .filter_map(|&i| self.cards.get(i))
             .collect()
     }
 
+    /// Get selected cards cloned
+    pub fn selected_cards_cloned(&self) -> Vec<SharedCard> {
+        self.selected_indices.iter()
+            .filter_map(|&i| self.cards.get(i).cloned())
+            .collect()
+    }
+
+    /// Get selected cards as cloned Card values (for scoring)
     pub fn selected_cards_mut(&self) -> Vec<Card> {
-        self.selected_cards().into_iter().cloned().collect()
+        self.selected_indices.iter()
+            .filter_map(|&i| self.cards.get(i))
+            .map(|shared| shared.borrow().clone())
+            .collect()
     }
 
     /// Get unselected cards in order (left to right)
-    pub fn get_unselected_cards(&self) -> Vec<&Card> {
+    pub fn get_unselected_cards(&self) -> Vec<&SharedCard> {
         let selected_indices_set: std::collections::HashSet<usize> = 
             self.selected_indices.iter().copied().collect();
         
@@ -238,18 +259,18 @@ impl Hand {
         // Track which cards are selected by their IDs (since positions will change)
         let selected_ids: std::collections::HashSet<_> = self.selected_indices
             .iter()
-            .map(|&idx| self.cards[idx].id)
+            .map(|&idx| self.cards[idx].borrow().id)
             .collect();
         
         // Sort the cards
-        self.cards.sort_by(|a, b| b.rank.cmp(&a.rank));
+        self.cards.sort_by(|a, b| b.borrow().rank.cmp(&a.borrow().rank));
         
         // Rebuild selected_indices based on card IDs
         self.selected_indices = self.cards
             .iter()
             .enumerate()
             .filter_map(|(idx, card)| {
-                if selected_ids.contains(&card.id) {
+                if selected_ids.contains(&card.borrow().id) {
                     Some(idx)
                 } else {
                     None
@@ -264,13 +285,15 @@ impl Hand {
         // Track which cards are selected by their IDs (since positions will change)
         let selected_ids: std::collections::HashSet<_> = self.selected_indices
             .iter()
-            .map(|&idx| self.cards[idx].id)
+            .map(|&idx| self.cards[idx].borrow().id)
             .collect();
         
         // Sort the cards
         self.cards.sort_by(|a, b| {
-            match a.suit.cmp(&b.suit) {
-                std::cmp::Ordering::Equal => b.rank.cmp(&a.rank),
+            let a_ref = a.borrow();
+            let b_ref = b.borrow();
+            match a_ref.suit.cmp(&b_ref.suit) {
+                std::cmp::Ordering::Equal => b_ref.rank.cmp(&a_ref.rank),
                 other => other,
             }
         });
@@ -280,7 +303,7 @@ impl Hand {
             .iter()
             .enumerate()
             .filter_map(|(idx, card)| {
-                if selected_ids.contains(&card.id) {
+                if selected_ids.contains(&card.borrow().id) {
                     Some(idx)
                 } else {
                     None
@@ -291,12 +314,12 @@ impl Hand {
 
     /// Get the total chip value of all cards in the hand
     pub fn total_chip_value(&self) -> i32 {
-        self.cards.iter().map(|card| card.chip_value()).sum()
+        self.cards.iter().map(|card| card.borrow().chip_value()).sum()
     }
 
     /// Get the total mult value of all cards in the hand
     pub fn total_mult_value(&self) -> f32 {
-        self.cards.iter().map(|card| card.mult_value()).sum()
+        self.cards.iter().map(|card| card.borrow().mult_value()).sum()
     }
 }
 
@@ -312,8 +335,8 @@ impl From<Vec<Card>> for Hand {
     }
 }
 
-impl Into<Vec<Card>> for Hand {
-    fn into(self) -> Vec<Card> {
-        self.cards
+impl From<Hand> for Vec<SharedCard> {
+    fn from(hand: Hand) -> Vec<SharedCard> {
+        hand.cards
     }
 }

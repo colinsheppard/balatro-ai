@@ -53,6 +53,9 @@ impl fmt::Display for DeckType {
     }
 }
 
+
+/// Type alias for a card that can be shared across the game
+pub type SharedDeck = Rc<RefCell<Deck>>;
 /// A deck of cards
 #[derive(Debug, Clone)]
 pub struct Deck {
@@ -91,12 +94,12 @@ impl Deck {
     }
 
     /// Draw a card from the deck
-    pub fn draw(&mut self) -> GameResult<Option<Card>> {
-        Ok(self.cards.pop_front().map(|shared| shared.borrow().clone()))
+    pub fn draw(&mut self) -> GameResult<Option<SharedCard>> {
+        Ok(self.cards.pop_front().map(|card| card.clone()))
     }
 
     /// Draw multiple cards from the deck
-    pub fn draw_multiple(&mut self, count: usize) -> GameResult<Vec<Card>> {
+    pub fn draw_multiple(&mut self, count: usize) -> GameResult<Vec<SharedCard>> {
         let mut drawn = Vec::new();
         for _ in 0..count {
             if let Some(card) = self.draw()? {
@@ -109,8 +112,8 @@ impl Deck {
     }
 
     /// Discard a card to the discard pile
-    pub fn discard(&mut self, card: Card) {
-        self.discard_pile.push(Rc::new(RefCell::new(card)));
+    pub fn discard(&mut self, card: SharedCard) {
+        self.discard_pile.push(card);
     }
 
     /// Shuffle the deck

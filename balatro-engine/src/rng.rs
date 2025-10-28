@@ -1,11 +1,14 @@
 //! Random number generation manager for Balatro game engine
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 use rand::SeedableRng;
 use rand::rngs::StdRng;
 
+pub type SharedRngManager = Rc<RefCell<GameRngManager>>;
 /// Manages RNG instances for deterministic, seeded random number generation
 #[derive(Debug, Clone)]
 pub struct GameRngManager {

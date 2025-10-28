@@ -220,13 +220,14 @@ fn apply_effects_in_hand(game_state: &mut GameState, mut hand_score: HandScore) 
     let unselected_cards = game_state.hand.get_unselected_cards();
 
     // Process each unselected card left to right
-    for card in unselected_cards {
+    for card_shared in unselected_cards {
+        let card = card_shared.borrow();
         // Count retriggers before processing the card
-        let retrigger_count = count_retriggers_in_hand(game_state, card)?;
+        let retrigger_count = count_retriggers_in_hand(game_state, &card)?;
 
         // Apply card effects with retriggers
         for _ in 0..retrigger_count + 1 {
-            hand_score = apply_card_effects_in_hand(game_state, card, hand_score)?;
+            hand_score = apply_card_effects_in_hand(game_state, &card, hand_score)?;
         }
     }
     
@@ -241,7 +242,7 @@ fn apply_card_effects_in_hand(game_state: &GameState, card: &Card, mut hand_scor
     }
 
     // B - Joker Effects: Jokers triggered by cards held in hand
-    let selected_cards: Vec<Card> = game_state.hand.selected_cards().into_iter().cloned().collect();
+    let selected_cards: Vec<Card> = game_state.hand.selected_cards_mut();
     for joker in &game_state.jokers {
         // TODO: Check if joker should be triggered by cards in hand
         // This would be jokers with conditional effects that check for held cards
@@ -282,7 +283,7 @@ fn count_retriggers_in_hand(game_state: &GameState, card: &Card) -> GameResult<u
 /// Apply effects from active jokers
 fn apply_joker_scoring(game_state: &GameState, mut hand_score: HandScore) -> GameResult<HandScore> {
     
-    let selected_cards: Vec<Card> = game_state.hand.selected_cards().into_iter().cloned().collect();
+    let selected_cards: Vec<Card> = game_state.hand.selected_cards_mut();
     for joker in &game_state.jokers {
         // TODO: Implement full joker effect application
         // For now, apply basic joker effects

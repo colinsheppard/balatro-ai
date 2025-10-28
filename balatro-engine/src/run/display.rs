@@ -85,13 +85,14 @@ pub fn display_playing_phase_state(game_state: &GameState) {
     let mut unselected_line = String::from("unselected: ");
     let mut indices_line =    String::from("to select:  ");
     
-    for (i, card) in cards.iter().enumerate() {
+    for (i, card_shared) in cards.iter().enumerate() {
+        let card = card_shared.borrow();
         if selected_indices.contains(&i) {
-            selected_line.push_str(&format!("{:<2} ", card));
+            selected_line.push_str(&format!("{:<2} ", *card));
             unselected_line.push_str(&"   ");
         } else {
             selected_line.push_str(&"   ");
-            unselected_line.push_str(&format!("{:<2} ", card));
+            unselected_line.push_str(&format!("{:<2} ", *card));
         }
         indices_line.push_str(&format!("{:<2} ", i + 2));
     }
@@ -166,16 +167,16 @@ pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, c
                 println!("{}: {}", action_num, action);
             }
             crate::actions::PlayingAction::SelectCard(card_idx) => {
-                println!("{}: Select {}", action_num, &cards[*card_idx]);
+                println!("{}: Select {}", action_num, *cards[*card_idx].borrow());
             }
             crate::actions::PlayingAction::DeselectCard(card_idx) => {
-                println!("{}: Deselect {}", action_num, &cards[*card_idx]);
+                println!("{}: Deselect {}", action_num, *cards[*card_idx].borrow());
             }
             crate::actions::PlayingAction::MoveRight(card_idx) => {
-                println!("{}: Move right {}", action_num, &cards[*card_idx]);
+                println!("{}: Move right {}", action_num, *cards[*card_idx].borrow());
             }
             crate::actions::PlayingAction::MoveLeft(card_idx) => {
-                println!("{}: Move left {}", action_num, &cards[*card_idx]);
+                println!("{}: Move left {}", action_num, *cards[*card_idx].borrow());
             }
             crate::actions::PlayingAction::SortByRank => {
                 println!("{}: Sort by rank", action_num);
