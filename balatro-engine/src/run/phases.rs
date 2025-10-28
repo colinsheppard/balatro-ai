@@ -77,7 +77,7 @@ fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Resul
                     blind_mut.status = BlindStatus::Active;
                 }
                 game_state.phase = GamePhase::Playing;
-                game_state.deck.shuffle();
+                game_state.deck.borrow_mut().shuffle();
                 game_state.clear_and_draw_hand().unwrap();
             }
             2 => {
@@ -130,7 +130,7 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
         crate::actions::PlayingAction::DiscardSelectedCards => {
             println!("Discarding selected cards...");
             let game_state = engine.game_state_mut();
-            game_state.hand.discard_selected_cards(&mut game_state.deck).unwrap();
+            game_state.hand.discard_selected_cards(&mut *game_state.deck.borrow_mut()).unwrap();
             game_state.draw_hand().unwrap();
             Ok(())
         }

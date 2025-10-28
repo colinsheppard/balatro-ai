@@ -115,7 +115,7 @@ fn test_deck_interaction_with_game_state() {
     // Draw hand
     game_state.clear_and_draw_hand().unwrap();
     assert_eq!(game_state.hand.len(), 8);
-    assert_eq!(game_state.deck.remaining_cards(), 44);
+    assert_eq!(game_state.deck.borrow().remaining_cards(), 44);
 }
 
 #[test]

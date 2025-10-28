@@ -267,11 +267,11 @@ mult = 4
     let king = Card::new(Suit::Spades, Rank::King);
 
     let cards = vec![
-       &ace,
-       &king,
+       ace,
+       king,
     ];
 
-    let (chip_mod, mult_mod) = joker.apply_played_hand_effects(&cards).unwrap();
+    let (chip_mod, mult_mod) = joker.apply_played_hand_effects(cards).unwrap();
     assert_eq!(chip_mod, 0);
     assert_eq!(mult_mod, 1.0);
 }

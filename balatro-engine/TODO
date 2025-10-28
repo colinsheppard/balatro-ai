@@ -1,0 +1,18 @@
+
+TODO:
+
+* Planet system needs to return cards that make up the poker hand so that only they 
+get scored.
+* Hmmm, instead of returning the cards, it might be better to add a field like 
+is_scoring to the cards themselves and mutate the card be ensuring only references are
+passed in. This allows us to not worry about the original ordering while inside of the 
+scoring algo.
+
+To do this, I need to learn more about mutability and references in Rust because the
+code gets very messy very quickly...
+
+The Planets.detect_poker_hand method needs to be modified to return both the poker hand as well as the cards that compose the poker hand. E.g. if the hand is a pair, then the cards returned would be the two cards that make up the pair.
+
+To do this, let's create a new struct that contains a PokerHand enum as well as Vec of Cards.
+
+Then we need to update the return value in the method. If the 

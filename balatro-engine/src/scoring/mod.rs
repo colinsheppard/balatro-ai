@@ -2,8 +2,9 @@
 //! 
 //! This module handles the four-phase scoring system for calculating hand scores.
 
+use crate::GameError;
 use crate::card::{Card, Enhancement, Edition, Seal};
-use crate::game::GameState;
+use crate::game::{self, GameState};
 use crate::joker::config::{JokerCondition, ActionType};
 use crate::error::GameResult;
 
@@ -35,6 +36,8 @@ impl Default for HandScore {
 }
 
 /// Calculate the score for a played hand
+/// Detailed explanation of the scoring process is here:
+/// https://www.reddit.com/r/balatro/comments/1blbexa/detailed_break_down_of_balatro_scoring_system_and/
 pub fn calculate_hand_score(game_state: &mut GameState) -> GameResult<HandScore> {
     if game_state.hand.selected_indices().is_empty() {
         return Err(crate::error::GameError::InvalidGameState("Cannot play empty hand".to_string()));
@@ -75,11 +78,13 @@ fn apply_pre_scoring(game_state: &mut GameState) -> GameResult<()> {
 /// Phase 2: Played Hand Scoring
 /// Evaluate each card in the selected hand
 fn apply_played_hand_scoring(game_state: &mut GameState) -> GameResult<HandScore> {
-    let mut hand_score = HandScore::new();
+    let selected_cards = game_state.hand.selected_cards_mut();
+    let poker_hand = game_state.planets.detect_poker_hand(&selected_cards).ok_or(GameError::InvalidGameState("No poker hand detected".to_string()))?;
+    let mut hand_score = game_state.planets.get_planet(poker_hand).ok_or(GameError::InvalidGameState("No planet found for poker hand".to_string()))?.get_base_score();
 
-    for card in game_state.hand.selected_cards_mut() {
-        // Count retriggers before scoring the card
-        let retrigger_count = count_retriggers(game_state, &card)?;
+    for card in selected_cards{
+        // Count retriggers before scoring the card and add 1 for the base card
+        let retrigger_count = 1 + count_retriggers(game_state, &card)?;
 
         // Apply retriggers
         for _ in 0..retrigger_count {

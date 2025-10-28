@@ -7,7 +7,7 @@ fn test_card_creation() {
     let card = Card::new(Suit::Hearts, Rank::Ace);
     assert_eq!(card.suit, Suit::Hearts);
     assert_eq!(card.rank, Rank::Ace);
-    assert_eq!(card.chip_value(), 1);
+    assert_eq!(card.chip_value(), 11);
     assert!(card.is_ace());
     assert!(!card.is_face_card());
 }
@@ -28,12 +28,13 @@ fn test_face_card_detection() {
 
 #[test]
 fn test_card_chip_values() {
-    assert_eq!(Card::new(Suit::Hearts, Rank::Ace).chip_value(), 1);
+    assert_eq!(Card::new(Suit::Hearts, Rank::Ace).chip_value(), 11);
     assert_eq!(Card::new(Suit::Hearts, Rank::Two).chip_value(), 2);
+    assert_eq!(Card::new(Suit::Hearts, Rank::Seven).chip_value(), 7);
     assert_eq!(Card::new(Suit::Hearts, Rank::Ten).chip_value(), 10);
-    assert_eq!(Card::new(Suit::Hearts, Rank::Jack).chip_value(), 11);
-    assert_eq!(Card::new(Suit::Hearts, Rank::Queen).chip_value(), 12);
-    assert_eq!(Card::new(Suit::Hearts, Rank::King).chip_value(), 13);
+    assert_eq!(Card::new(Suit::Hearts, Rank::Jack).chip_value(), 10);
+    assert_eq!(Card::new(Suit::Hearts, Rank::Queen).chip_value(), 10);
+    assert_eq!(Card::new(Suit::Hearts, Rank::King).chip_value(), 10);
 }
 
 #[test]
@@ -50,7 +51,7 @@ fn test_suit_equality() {
 
 #[test]
 fn test_rank_ordering() {
-    assert!(Rank::Ace < Rank::Two);
+    assert!(Rank::Ace > Rank::Two);
     assert!(Rank::King > Rank::Queen);
     assert_eq!(Rank::Ten, Rank::Ten);
 }

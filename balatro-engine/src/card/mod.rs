@@ -2,15 +2,15 @@
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use std::fmt;
+use std::{cell::RefCell, fmt, rc::Rc};
 
 /// Suit of a playing card
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Suit {
-    Hearts,
-    Diamonds,
-    Clubs,
     Spades,
+    Hearts,
+    Clubs,
+    Diamonds,
 }
 
 /// Rank of a playing card
@@ -63,6 +63,9 @@ pub enum Seal {
     Gold,
 }
 
+/// Type alias for a card that can be shared across the game
+pub type SharedCard = Rc<RefCell<Card>>;
+
 /// A playing card in the game
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Card {
@@ -72,6 +75,7 @@ pub struct Card {
     pub enhancement: Option<Enhancement>,
     pub edition: Edition,
     pub seal: Option<Seal>,
+    pub is_scoring: bool,
 }
 
 impl Card {
@@ -84,12 +88,19 @@ impl Card {
             enhancement: None,
             edition: Edition::Base,
             seal: None,
+            is_scoring: false,
         }
     }
 
     /// Get the base chip value of this card
     pub fn chip_value(&self) -> i32 {
-        self.rank as i32
+        match self.rank {   
+            Rank::Ace => 11,
+            Rank::Jack => 10,
+            Rank::Queen => 10,
+            Rank::King => 10,
+            _ => self.rank as i32,
+        }
     }
 
     /// Get the base multiplier value of this card

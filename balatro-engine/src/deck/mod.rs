@@ -1,11 +1,12 @@
 //! Deck system for Balatro game engine
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::fmt;
 use std::rc::Rc;
 use std::cell::RefCell;
 use rand::seq::SliceRandom;
+use crate::SharedCard;
 use crate::card::{Card, Suit, Rank};
 use crate::error::GameResult;
 use crate::rng::GameRngManager;
@@ -56,16 +57,16 @@ impl fmt::Display for DeckType {
 #[derive(Debug, Clone)]
 pub struct Deck {
     pub deck_type: DeckType,
-    pub cards: VecDeque<Card>,
-    pub discard_pile: Vec<Card>,
+    pub cards: VecDeque<SharedCard>,
+    pub discard_pile: Vec<SharedCard>,
     // Skip serde serialization for the RNG manager
     #[allow(dead_code)]
     rng_manager: Rc<RefCell<GameRngManager>>,
 }
 
 impl Deck {
-    /// Create a new standard deck
-    pub fn new(_deck_type: DeckType, rng_manager: Rc<RefCell<GameRngManager>>) -> Self {
+    /// Create a new standard deck, wrapped in Rc<RefCell<>>
+    pub fn new(_deck_type: DeckType, rng_manager: Rc<RefCell<GameRngManager>>) -> Rc<RefCell<Self>> {
         let mut cards = VecDeque::new();
         
         // Create standard 52-card deck
@@ -75,21 +76,23 @@ impl Deck {
                 Rank::Six, Rank::Seven, Rank::Eight, Rank::Nine, Rank::Ten,
                 Rank::Jack, Rank::Queen, Rank::King,
             ] {
-                cards.push_back(Card::new(suit, rank));
+                cards.push_back(Rc::new(RefCell::new(Card::new(suit, rank))));
             }
         }
         
-        Self {
+        let deck = Self {
             deck_type: _deck_type,
             cards,
             discard_pile: Vec::new(),
             rng_manager,
-        }
+        };
+        
+        Rc::new(RefCell::new(deck))
     }
 
     /// Draw a card from the deck
     pub fn draw(&mut self) -> GameResult<Option<Card>> {
-        Ok(self.cards.pop_front())
+        Ok(self.cards.pop_front().map(|shared| shared.borrow().clone()))
     }
 
     /// Draw multiple cards from the deck
@@ -107,12 +110,12 @@ impl Deck {
 
     /// Discard a card to the discard pile
     pub fn discard(&mut self, card: Card) {
-        self.discard_pile.push(card);
+        self.discard_pile.push(Rc::new(RefCell::new(card)));
     }
 
     /// Shuffle the deck
     pub fn shuffle(&mut self) {
-        let mut cards_vec: Vec<Card> = self.cards.drain(..).collect();
+        let mut cards_vec: Vec<_> = self.cards.drain(..).collect();
         cards_vec.shuffle(self.rng_manager.borrow_mut().get_rng("DECK_SHUFFLE"));
         self.cards = cards_vec.into();
     }

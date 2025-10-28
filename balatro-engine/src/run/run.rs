@@ -20,6 +20,9 @@ pub fn run_game_loop(engine: &mut BalatroEngine) -> Result<bool, Box<dyn std::er
             GamePhase::Shop => {
                 handle_shop_phase(engine)?;
             }
+            GamePhase::ShopPackSelection => {
+                // TODO: Handle pack selection
+            }
             GamePhase::BlindSelect => {
                 handle_blind_select_phase(engine)?;
             }

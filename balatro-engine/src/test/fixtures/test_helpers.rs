@@ -13,7 +13,7 @@ pub fn create_test_rng() -> Rc<RefCell<GameRngManager>> {
 }
 
 /// Create a standard test deck
-pub fn create_test_deck() -> Deck {
+pub fn create_test_deck() -> Rc<RefCell<Deck>> {
     let rng = create_test_rng();
     Deck::new(DeckType::Red, rng)
 }

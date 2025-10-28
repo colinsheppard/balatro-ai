@@ -7,8 +7,8 @@ use crate::test::fixtures::test_helpers::create_test_rng;
 
 #[test]
 fn test_game_state_creation() {
-    let mut rng = create_test_rng();
-    let game_state = GameState::new(&mut rng);
+    let rng = create_test_rng();
+    let game_state = GameState::new(rng);
     assert_eq!(game_state.phase, GamePhase::BlindSelect);
     assert_eq!(game_state.ante, 1);
     assert_eq!(game_state.hand_size, 8);
@@ -21,19 +21,19 @@ fn test_game_state_creation() {
 
 #[test]
 fn test_drawing_hand() {
-    let mut rng = create_test_rng();
-    let mut game_state = GameState::new(&mut rng);
+    let rng = create_test_rng();
+    let mut game_state = GameState::new(rng);
     game_state.hand_size = 5;
     
     game_state.draw_hand().unwrap();
     assert_eq!(game_state.hand.len(), 5);
-    assert_eq!(game_state.deck.remaining_cards(), 47);
+    assert_eq!(game_state.deck.borrow().remaining_cards(), 47);
 }
 
 #[test]
 fn test_playing_hand() {
-    let mut rng = create_test_rng();
-    let mut game_state = GameState::new(&mut rng);
+    let rng = create_test_rng();
+    let mut game_state = GameState::new(rng);
     game_state.hand_size = 5;
     game_state.draw_hand().unwrap();
     
@@ -49,16 +49,16 @@ fn test_playing_hand() {
 
 #[test]
 fn test_playing_empty_hand() {
-    let mut rng = create_test_rng();
-    let mut game_state = GameState::new(&mut rng);
+    let rng = create_test_rng();
+    let mut game_state = GameState::new(rng);
     let result = game_state.play_hand();
     assert!(result.is_err());
 }
 
 #[test]
 fn test_ending_round() {
-    let mut rng = create_test_rng();
-    let mut game_state = GameState::new(&mut rng);
+    let rng = create_test_rng();
+    let mut game_state = GameState::new(rng);
     let initial_round = game_state.round_number;
     
     game_state.end_round().unwrap();
@@ -68,8 +68,8 @@ fn test_ending_round() {
 
 #[test]
 fn test_starting_new_ante() {
-    let mut rng = create_test_rng();
-    let mut game_state = GameState::new(&mut rng);
+    let rng = create_test_rng();
+    let mut game_state = GameState::new(rng);
     let initial_ante = game_state.ante;
     
     game_state.start_new_ante().unwrap();
@@ -87,9 +87,9 @@ fn test_game_phase_variants() {
         GamePhase::GameOver,
     ];
     
-    let mut rng = create_test_rng();
+    let rng = create_test_rng();
     for phase in phases {
-        let mut game_state = GameState::new(&mut rng);
+        let mut game_state = GameState::new(rng.clone());
         game_state.phase = phase.clone();
         assert_eq!(game_state.phase, phase);
     }

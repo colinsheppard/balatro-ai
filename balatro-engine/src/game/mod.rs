@@ -17,6 +17,7 @@ use crate::rng::GameRngManager;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GamePhase {
     Shop,
+    ShopPackSelection,
     BlindSelect,
     Playing,
     RoundEnd,
@@ -26,14 +27,14 @@ pub enum GamePhase {
 // Removed tuple structs - now using primitive types directly
 
 /// Main game state
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GameState {
     pub phase: GamePhase,
     pub ante: u32,
     pub hand_size: usize,
     pub money: i32,
     pub score: i32,
-    pub deck: Deck,
+    pub deck: Rc<RefCell<Deck>>,
     pub stake: Stake,
     pub jokers: Vec<JokerInstance>,
     pub hand: Hand,
@@ -60,8 +61,8 @@ impl GameState {
             )
         });
 
-        let mut deck = Deck::new(DeckType::Red, rng_manager);
-        deck.shuffle();
+        let deck_ref = Deck::new(DeckType::Red, rng_manager.clone());
+        deck_ref.borrow_mut().shuffle();
 
         Self {
             phase: GamePhase::BlindSelect,
@@ -69,7 +70,7 @@ impl GameState {
             hand_size: 8,
             money: 4,
             score: 0,
-            deck,
+            deck: deck_ref,
             stake,
             jokers: Vec::new(),
             hand: Hand::new(),
@@ -94,8 +95,8 @@ impl GameState {
             )
         });
 
-        let mut deck = Deck::new(deck_type, rng_manager);
-        deck.shuffle();
+        let deck_ref = Deck::new(deck_type, rng_manager.clone());
+        deck_ref.borrow_mut().shuffle();
 
         Self {
             phase: GamePhase::BlindSelect,
@@ -103,7 +104,7 @@ impl GameState {
             hand_size: 8,
             money: 4,
             score: 0,
-            deck,
+            deck: deck_ref,
             stake,
             jokers: Vec::new(),
             hand: Hand::new(),
@@ -127,7 +128,7 @@ impl GameState {
         if self.hand.len() >= self.hand_size {
             return Err(GameError::InvalidGameState("Hand is already full".to_string()));
         }
-        let cards = self.deck.draw_multiple(self.hand_size - self.hand.len())?;
+        let cards = self.deck.borrow_mut().draw_multiple(self.hand_size - self.hand.len())?;
         for card in cards {
             self.hand.add_card(card);
         }
@@ -144,7 +145,7 @@ impl GameState {
         self.score = final_score;
         
         // Remove played cards from hand
-        self.hand.discard_selected_cards(&mut self.deck)?;
+        self.hand.discard_selected_cards(&mut *self.deck.borrow_mut())?;
 
         Ok(final_score)
     }

@@ -6,7 +6,7 @@ use crate::GameState;
 pub fn display_game_state(game_state: &GameState) {
     println!("\n=== BALATRO GAME STATE ===");
     println!("Phase: {:?}", game_state.phase);
-    println!("Deck: {:?}", game_state.deck.deck_type);
+    println!("Deck: {:?}", game_state.deck.borrow().deck_type);
     println!("Stake: {:?}", game_state.stake.level);
     println!("Ante: {}", game_state.ante);
     println!("Round: {}", game_state.round_number);

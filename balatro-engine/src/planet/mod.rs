@@ -64,8 +64,7 @@ impl Planet {
         self.level += 1;
     }
 
-    #[allow(dead_code)]
-    fn get_base_score(&self) -> HandScore {
+    pub fn get_base_score(&self) -> HandScore {
         let mut hand_score = HandScore::new();
         hand_score.chip_score = self.base_chips + self.add_chips * (self.level - 1);
         hand_score.mult_score = (self.base_mult + self.add_mult * (self.level - 1)) as f32;

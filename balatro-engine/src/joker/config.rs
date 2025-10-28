@@ -316,6 +316,84 @@ impl std::fmt::Display for JokerInstance {
     }
 }
 
+/// A collection of jokers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Jokers {
+    pub jokers: Vec<JokerInstance>,
+}
+
+impl Jokers {
+    /// Create a new empty Jokers collection
+    pub fn new() -> Self {
+        Self {
+            jokers: Vec::new(),
+        }
+    }
+
+    /// Get the number of jokers
+    pub fn len(&self) -> usize {
+        self.jokers.len()
+    }
+
+    /// Check if the collection is empty
+    pub fn is_empty(&self) -> bool {
+        self.jokers.is_empty()
+    }
+
+    /// Add a joker to the collection
+    pub fn push(&mut self, joker: JokerInstance) {
+        self.jokers.push(joker);
+    }
+
+    /// Get an iterator over the jokers
+    pub fn iter(&self) -> std::slice::Iter<'_, JokerInstance> {
+        self.jokers.iter()
+    }
+
+    /// Get a mutable iterator over the jokers
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, JokerInstance> {
+        self.jokers.iter_mut()
+    }
+}
+
+impl Default for Jokers {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::ops::Index<usize> for Jokers {
+    type Output = JokerInstance;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.jokers[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for Jokers {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.jokers[index]
+    }
+}
+
+impl<'a> IntoIterator for &'a Jokers {
+    type Item = &'a JokerInstance;
+    type IntoIter = std::slice::Iter<'a, JokerInstance>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.jokers.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Jokers {
+    type Item = &'a mut JokerInstance;
+    type IntoIter = std::slice::IterMut<'a, JokerInstance>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.jokers.iter_mut()
+    }
+}
+
 /// Helper function to convert string rarity to enum
 impl std::str::FromStr for JokerRarity {
     type Err = GameError;

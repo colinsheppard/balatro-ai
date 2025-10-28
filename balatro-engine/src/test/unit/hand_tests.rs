@@ -107,10 +107,10 @@ fn test_sort_by_rank_desc() {
     
     hand.sort_by_rank_desc();
     
-    // Should be sorted: King, Two, Ace (descending by rank value)
-    assert_eq!(hand.get(0).unwrap().rank, Rank::King);
-    assert_eq!(hand.get(1).unwrap().rank, Rank::Two);
-    assert_eq!(hand.get(2).unwrap().rank, Rank::Ace);
+    // Should be sorted: Ace, King, Two (descending by rank value)
+    assert_eq!(hand.get(0).unwrap().rank, Rank::Ace);
+    assert_eq!(hand.get(1).unwrap().rank, Rank::King);
+    assert_eq!(hand.get(2).unwrap().rank, Rank::Two);
 }
 
 #[test]
@@ -124,15 +124,15 @@ fn test_sort_by_suit_then_rank() {
     
     hand.sort_by_suit_then_rank();
     
-    // Should be sorted by suit (Hearts first), then by rank (descending)
-    assert_eq!(hand.get(0).unwrap().suit, Suit::Hearts);
-    assert_eq!(hand.get(0).unwrap().rank, Rank::Queen);  // Queen (12) > Ace (1)
-    assert_eq!(hand.get(1).unwrap().suit, Suit::Hearts);
-    assert_eq!(hand.get(1).unwrap().rank, Rank::Ace);
-    assert_eq!(hand.get(2).unwrap().suit, Suit::Spades);
-    assert_eq!(hand.get(2).unwrap().rank, Rank::King);
-    assert_eq!(hand.get(3).unwrap().suit, Suit::Spades);
-    assert_eq!(hand.get(3).unwrap().rank, Rank::Two);
+    // Should be sorted by suit (Spadesfirst), then by rank (descending)
+    assert_eq!(hand.get(0).unwrap().suit, Suit::Spades);
+    assert_eq!(hand.get(0).unwrap().rank, Rank::King);
+    assert_eq!(hand.get(1).unwrap().suit, Suit::Spades);
+    assert_eq!(hand.get(1).unwrap().rank, Rank::Two);
+    assert_eq!(hand.get(2).unwrap().suit, Suit::Hearts);
+    assert_eq!(hand.get(2).unwrap().rank, Rank::Ace);
+    assert_eq!(hand.get(3).unwrap().suit, Suit::Hearts);
+    assert_eq!(hand.get(3).unwrap().rank, Rank::Queen);  // Queen (12) > Ace (1)
 }
 
 #[test]
