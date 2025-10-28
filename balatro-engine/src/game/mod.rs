@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use crate::hand::Hand;
 use crate::deck::{Deck, DeckType};
 use crate::joker::JokerInstance;
+use crate::planet::Planets;
 use crate::stakes::{Stake, StakeLevel};
 use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor};
 use crate::consumable::Consumable;
@@ -39,6 +40,7 @@ pub struct GameState {
     pub upcoming_blinds: UpcomingBlinds,
     pub consumables: Vec<Consumable>,
     pub round_number: u32,
+    pub planets: Planets,
 }
 
 impl GameState {
@@ -74,6 +76,7 @@ impl GameState {
             upcoming_blinds,
             consumables: Vec::new(),
             round_number: 1,
+            planets: Planets::new_default().unwrap_or_default(),
         }
     }
 
@@ -107,6 +110,7 @@ impl GameState {
             upcoming_blinds,
             consumables: Vec::new(),
             round_number: 1,
+            planets: Planets::new_default().unwrap_or_default(),
         }
     }
 

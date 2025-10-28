@@ -1,0 +1,157 @@
+[[planet]]
+name = "Pluto"
+poker_hand = "high_card"
+poker_hand_name = "High Card"
+
+[[planet.addition]]
+mult = 1
+chips = 10
+
+[[planet.hand_base_score]]
+mult = 1
+chips = 5
+
+[[planet]]
+name = "Mercury"
+poker_hand = "pair"
+poker_hand_name = "Pair"
+
+[[planet.addition]]
+mult = 1
+chips = 15
+
+[[planet.hand_base_score]]
+mult = 2
+chips = 10
+
+[[planet]]
+name = "Uranus"
+poker_hand = "two_pair"
+poker_hand_name = "Two Pair"
+
+[[planet.addition]]
+mult = 1
+chips = 20
+
+[[planet.hand_base_score]]
+mult = 2
+chips = 20
+
+[[planet]]
+name = "Venus"
+poker_hand = "three_of_a_kind"
+poker_hand_name = "Three of a Kind"
+
+[[planet.addition]]
+mult = 2
+chips = 20
+
+[[planet.hand_base_score]]
+mult = 3
+chips = 30
+
+[[planet]]
+name = "Saturn"
+poker_hand = "straight"
+poker_hand_name = "Straight"
+
+[[planet.addition]]
+mult = 3
+chips = 30
+
+[[planet.hand_base_score]]
+mult = 4
+chips = 30
+
+[[planet]]
+name = "Jupiter"
+poker_hand = "flush"
+poker_hand_name = "Flush"
+
+[[planet.addition]]
+mult = 2
+chips = 15
+
+[[planet.hand_base_score]]
+mult = 4
+chips = 35
+
+[[planet]]
+name = "Earth"
+poker_hand = "full_house"
+poker_hand_name = "Full House"
+
+[[planet.addition]]
+mult = 2
+chips = 25
+
+[[planet.hand_base_score]]
+mult = 4
+chips = 40
+
+[[planet]]
+name = "Mars"
+poker_hand = "four_of_a_kind"
+poker_hand_name = "Four of a Kind"
+
+[[planet.addition]]
+mult = 3
+chips = 30
+
+[[planet.hand_base_score]]
+mult = 7
+chips = 60
+
+[[planet]]
+name = "Neptune"
+poker_hand = "straight_flush"
+poker_hand_name = "Straight Flush"
+
+[[planet.addition]]
+mult = 4
+chips = 40
+
+[[planet.hand_base_score]]
+mult = 8
+chips = 100
+
+[[planet]]
+name = "Planet X"
+poker_hand = "five_of_a_kind"
+poker_hand_name = "Five of a Kind"
+
+[[planet.addition]]
+mult = 3
+chips = 35
+
+[[planet.hand_base_score]]
+mult = 12
+chips = 120
+
+[[planet]]
+name = "Ceres"
+poker_hand = "flush_house"
+poker_hand_name = "Flush House"
+
+[[planet.addition]]
+mult = 4
+chips = 40
+
+[[planet.hand_base_score]]
+mult = 14
+chips = 140
+
+[[planet]]
+name = "Eris"
+poker_hand = "flush_five"
+poker_hand_name = "Flush Five"
+
+[[planet.addition]]
+mult = 3
+chips = 50
+
+[[planet.hand_base_score]]
+mult = 16
+chips = 160
+
+

@@ -1,0 +1,24 @@
+
+1. In pre-scoring we iterate through each joker and we "apply_joker_pre_scoring_effects" which should be a function that takes a GameState as argument and which will mutate the game state according to the specifics of each joker (leave specifics as stubs for now).
+
+2.  In played hand scoring we iterate through the selected hand in order and do the following 5 things:
+
+A - Add Base Card Chips
+B - Apply Enhanced Card Effects: look for enhancements and add them to chips or mult.
+C - Trigger Card Editions: Foil (+50 chips), Holographic (+10 Mult) or Polychrome (1.5 xMult).
+D - Trigger Joker Effects: Look through the jokers and find any with a conditional effect that is per_card and apply them.
+F - Gold Seal, if card has one. It will give $3 after played.
+
+After we score the card, we evaluated if any retriggers should happen. We count the number of retriggers as sum of "has red seal" plus any jokers that result in an effect action of "retrigger". 
+
+For each retrigger, execute steps A through F again.
+
+3. Effects in hand: 
+
+Cards in hand get processed from left to right, triggering the effects in the following order:
+
+A - Steal: If card has Steal, will multiply the mult result of the Dealt Hand Scoring x1.5.
+B - Joker Effects: Jokers that get triggered by cards held in hand could result in more scoring or money generated.
+C - Retriggers: just like above, we count the number of retriggers by checking for Red Seal (1 retrigger) and then iterating through each joker and counting the number of joker effect actions of type "retrigger_in_hand"
+
+4. Joker Scoring: Remaining Jokers are executed in order. If a Joker has an Edition like Polychrome, Holographic or Foil, those will get triggered after the main effect of the Joker was triggered.

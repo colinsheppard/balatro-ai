@@ -20,6 +20,7 @@ pub mod input;
 pub mod run;
 pub mod rng;
 pub mod scoring;
+pub mod planet;
 
 // Re-export commonly used types
 pub use card::*;
@@ -34,6 +35,7 @@ pub use hand::*;
 pub use actions::*;
 pub use input::*;
 pub use rng::*;
+pub use planet::*;
 
 /// The main game engine that orchestrates all game systems
 pub struct BalatroEngine {
