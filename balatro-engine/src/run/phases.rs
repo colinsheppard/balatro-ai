@@ -124,7 +124,10 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
         }
         crate::actions::PlayingAction::DiscardSelectedCards => {
             println!("Discarding selected cards...");
-            engine.game_state_mut().phase = GamePhase::RoundEnd;
+            let game_state = engine.game_state_mut();
+            game_state.hand.discard_selected_cards(&mut game_state.deck).unwrap();
+            drop(game_state);
+            engine.game_state_mut().draw_hand().unwrap();
             Ok(())
         }
         crate::actions::PlayingAction::SelectCard(card_idx) => {

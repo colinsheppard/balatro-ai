@@ -146,7 +146,7 @@ impl GameState {
         let final_score = self.apply_joker_effects(hand_score, &selected_cards)?;
         
         // Remove played cards from hand
-        self.hand.remove_selected_cards()?;
+        self.hand.discard_selected_cards(&mut self.deck)?;
 
         Ok(final_score)
     }

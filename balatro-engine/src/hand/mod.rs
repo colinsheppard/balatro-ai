@@ -1,6 +1,7 @@
 //! Hand management system for Balatro game engine
 
 use serde::{Deserialize, Serialize};
+use crate::Deck;
 use crate::card::{Card, Suit, Rank};
 use crate::error::{GameError, GameResult};
 
@@ -52,6 +53,24 @@ impl Hand {
     pub fn add_card(&mut self, card: Card) {
         self.cards.push(card);
     }
+
+    pub fn discard_selected_cards(&mut self, deck: &mut Deck) -> GameResult<()> {
+        if self.selected_indices.is_empty() {
+            return Err(GameError::InvalidGameState("No cards selected to discard".to_string()));
+        }
+        
+        // Sort indices in descending order to remove from back to front
+        let mut indices_to_remove = self.selected_indices.clone();
+        indices_to_remove.sort_by(|a, b| b.cmp(a));
+        
+        for index in indices_to_remove {
+            let card = self.remove_card(index)?;
+            deck.discard(card);
+        }
+        Ok(())
+    }
+
+
 
     /// Remove a card by index and return it
     pub fn remove_card(&mut self, index: usize) -> GameResult<Card> {

@@ -32,7 +32,7 @@ Run a specific test:
 ### Method 2: Using Environment Variables
 
 ```bash
-BALATRO_INPUT_FILE=test_inputs/quick_start.txt cargo run --release
+BALATRO_INPUT_FILE=input/quick_start.txt cargo run --release
 ```
 
 ### Method 3: Using Input Piping
@@ -157,13 +157,13 @@ Then run tests using any of the methods above.
 
 ## Adding New Test Scenarios
 
-1. Create a new input file in `test_inputs/` directory
+1. Create a new input file in `input/` directory
 2. Add the test name to `test.sh` script
 3. Add the test to `run_tests.sh` if desired
 
 Example new test file:
 ```
-# test_inputs/my_test.txt
+# input/my_test.txt
 24
 1
 2

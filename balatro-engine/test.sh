@@ -14,7 +14,7 @@ if [ $# -eq 0 ]; then
 fi
 
 TEST_NAME=$1
-INPUT_FILE="test_inputs/${TEST_NAME}.txt"
+INPUT_FILE="input/${TEST_NAME}.txt"
 
 if [ ! -f "$INPUT_FILE" ]; then
     echo "Error: Test file $INPUT_FILE not found"
