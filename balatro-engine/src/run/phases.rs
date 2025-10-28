@@ -118,16 +118,20 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
     match action {
         crate::actions::PlayingAction::PlaySelectedCards => {
             println!("Playing selected cards...");
-            let _score = engine.game_state_mut().play_hand().unwrap_or(0);
-            engine.game_state_mut().phase = GamePhase::RoundEnd;
+            let game_state = engine.game_state_mut();
+            let _score = game_state.play_hand().unwrap_or(0);
+            if _score >= game_state.get_current_blind().unwrap().required_score { 
+                game_state.phase = GamePhase::RoundEnd;
+            } else {
+                game_state.draw_hand().unwrap();
+            }
             Ok(())
         }
         crate::actions::PlayingAction::DiscardSelectedCards => {
             println!("Discarding selected cards...");
             let game_state = engine.game_state_mut();
             game_state.hand.discard_selected_cards(&mut game_state.deck).unwrap();
-            drop(game_state);
-            engine.game_state_mut().draw_hand().unwrap();
+            game_state.draw_hand().unwrap();
             Ok(())
         }
         crate::actions::PlayingAction::SelectCard(card_idx) => {

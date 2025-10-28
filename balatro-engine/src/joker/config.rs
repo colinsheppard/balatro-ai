@@ -287,6 +287,12 @@ impl JokerInstance {
     }
 }
 
+impl std::fmt::Display for JokerInstance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.definition.name)
+    }
+}
+
 /// Helper function to convert string rarity to enum
 impl std::str::FromStr for JokerRarity {
     type Err = GameError;

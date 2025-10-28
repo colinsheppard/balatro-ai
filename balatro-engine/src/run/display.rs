@@ -11,9 +11,12 @@ pub fn display_game_state(game_state: &GameState) {
     println!("Ante: {}", game_state.ante);
     println!("Round: {}", game_state.round_number);
     println!("Money: ${}", game_state.money);
-    println!("Score: {}", game_state.score);
     println!("Hand Size: {}", game_state.hand_size);
-    println!("Jokers: {}", game_state.jokers.len());
+    let mut jokers_line = String::from("");
+    for (i, joker) in game_state.jokers.iter().enumerate() {
+        jokers_line.push_str(&format!("{} ", joker));
+    }
+    println!("Jokers ({}): {}", game_state.jokers.len(), jokers_line);
     println!("Consumables: {}", game_state.consumables.len());
     
     // Display blind statuses
@@ -64,11 +67,14 @@ pub fn display_blind_select_phase_state(game_state: &GameState) {
 
 /// Display Playing phase specific state
 pub fn display_playing_phase_state(game_state: &GameState) {
-    println!("\n--- PLAYING PHASE ---");
-    println!("Jokers:");
-    for (i, joker) in game_state.jokers.iter().enumerate() {
-        println!("  {}: {:?}", i + 1, joker);
+    if let Some(active_blind) = game_state.upcoming_blinds.get_active_blind() {
+        println!("\n--- PLAYING {} ---", active_blind.name);
+        println!("Score: ({} / {})", game_state.score, active_blind.required_score);
+    } else {
+        // Fallback if no active blind is found
+        println!("\n--- PLAYING PHASE ---");
     }
+    
     
     // Display hand in horizontal layout with selection info
     let selected_indices: std::collections::HashSet<usize> = game_state.hand.selected_indices().iter().copied().collect();
@@ -90,7 +96,7 @@ pub fn display_playing_phase_state(game_state: &GameState) {
         indices_line.push_str(&format!("{:<2} ", i + 2));
     }
     
-    println!("Hand:");
+    println!("\nHand:");
     println!("{}", selected_line);
     println!("{}", unselected_line);
     println!("{}", indices_line);

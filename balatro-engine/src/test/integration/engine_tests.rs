@@ -1,6 +1,6 @@
 //! Integration tests for the Balatro engine
 
-use crate::{BalatroEngine, GamePhase, InputSource};
+use crate::{BalatroEngine, GamePhase, InputSource, JokerInstance};
 use crate::joker::JokerManager;
 use crate::deck::DeckType;
 use crate::run::{handle_initial_menu, initialize_input_source, run_game_loop};
@@ -176,6 +176,27 @@ fn test_integration_with_main_rs_via_env() {
     let mut engine = BalatroEngine::new(12345);
     engine.start_new_default_run().unwrap();
     handle_initial_menu(&mut engine).unwrap();
+    engine.game_state_mut().jokers.push(create_test_joker());
     run_game_loop(&mut engine).unwrap();
+}
+
+fn create_test_joker() -> JokerInstance {
+    let toml_content = r#"
+    schema_version = "1.0.0"
     
+    [[jokers]]
+    id = "test_joker"
+    name = "Test Joker"
+    description = "A test joker"
+    rarity = "common"
+    cost = 3
+    
+    [jokers.effect]
+    type = "scoring"
+    mult = 4
+    "#;
+    
+    let manager = JokerManager::from_str(toml_content).unwrap();
+    let joker = manager.create_joker("test_joker").unwrap();
+    joker
 }

@@ -215,6 +215,19 @@ impl UpcomingBlinds {
             None
         }
     }
+
+    /// Get the currently active blind
+    pub fn get_active_blind(&self) -> Option<&Blind> {
+        if self.small.status == BlindStatus::Active {
+            Some(&self.small)
+        } else if self.big.status == BlindStatus::Active {
+            Some(&self.big)
+        } else if self.boss.status == BlindStatus::Active {
+            Some(&self.boss)
+        } else {
+            None
+        }
+    }
 }
 
 /// Processor for generating and managing blinds
@@ -254,21 +267,21 @@ impl BlindProcessor {
 
         // Create the blinds
         let small = Blind::new(
-            format!("Small Blind {}", ante),
+            format!("Small Blind, Ante{}", ante),
             BlindType::Small,
             small_score,
             small_money,
         );
 
         let big = Blind::new(
-            format!("Big Blind {}", ante),
+            format!("Big Blind, Ante{}", ante),
             BlindType::Big,
             big_score,
             big_money,
         );
 
         let boss = Blind::new_boss(
-            format!("Boss Blind {}", ante),
+            format!("Boss Blind, Ante{}", ante),
             boss_score,
             boss_money,
             BossEffect::None, // TODO: Implement specific boss effects based on ante
