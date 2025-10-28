@@ -25,6 +25,33 @@ pub enum GamePhase {
 
 // Removed tuple structs - now using primitive types directly
 
+/// Hand score tracking
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct HandScore {
+    pub chip_score: i32,
+    pub mult_score: f32,
+}
+
+impl HandScore {
+    pub fn new() -> Self {
+        Self {
+            chip_score: 0,
+            mult_score: 1.0,
+        }
+    }
+
+    /// Get the final score by multiplying chips by mult
+    pub fn final_score(&self) -> f32 {
+        self.chip_score as f32 * self.mult_score
+    }
+}
+
+impl Default for HandScore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Main game state
 #[derive(Debug, Clone)]
 pub struct GameState {
@@ -140,11 +167,23 @@ impl GameState {
         // Get the selected cards before removing them
         let selected_cards: Vec<Card> = self.hand.selected_cards().into_iter().cloned().collect();
 
-        let hand_score = self.calculate_hand_score(&selected_cards)?;
-        
-        // Apply joker effects
-        let final_score = self.apply_joker_effects(hand_score, &selected_cards)?;
+        // Initialize hand score
+        let mut hand_score = HandScore::new();
 
+        // Phase 1: Pre-scoring
+        hand_score = self.apply_pre_scoring(hand_score, &selected_cards)?;
+
+        // Phase 2: Played Hand Scoring
+        hand_score = self.apply_played_hand_scoring(hand_score, &selected_cards)?;
+
+        // Phase 3: Effects in Hand
+        hand_score = self.apply_effects_in_hand(hand_score, &selected_cards)?;
+
+        // Phase 4: Joker Scoring
+        hand_score = self.apply_joker_scoring(hand_score, &selected_cards)?;
+
+        // Calculate final score
+        let final_score = hand_score.final_score() as i32;
         self.score = final_score;
         
         // Remove played cards from hand
@@ -153,29 +192,51 @@ impl GameState {
         Ok(final_score)
     }
 
-    /// Calculate the score for a poker hand
-    fn calculate_hand_score(&self, cards: &[Card]) -> GameResult<i32> {
-        // Basic implementation - will be expanded with full poker hand logic
-        let mut score = 0;
-        for card in cards {
-            score += card.chip_value();
-        }
-        Ok(score)
+    /// Phase 1: Pre-scoring
+    /// Apply pre-scoring effects before the hand is evaluated
+    fn apply_pre_scoring(&self, hand_score: HandScore, _cards: &[Card]) -> GameResult<HandScore> {
+        // TODO: Implement pre-scoring effects
+        // This includes effects that modify the hand before evaluation
+        // Examples: cards that change suit/rank, effects that modify hand composition
+        Ok(hand_score)
     }
 
-    /// Apply joker effects to a score
-    fn apply_joker_effects(&self, base_score: i32, cards: &[Card]) -> GameResult<i32> {
-        let mut final_score = base_score as f32;
-        
-        // Convert &[Card] to &Vec<&Card> for joker compatibility
+    /// Phase 2: Played Hand Scoring
+    /// Evaluate the poker hand and calculate base score
+    fn apply_played_hand_scoring(&self, mut hand_score: HandScore, cards: &[Card]) -> GameResult<HandScore> {
+        // TODO: Implement poker hand detection and scoring
+        // This should detect hand types (pair, flush, etc.) and apply base scoring
+        // For now, just sum up the chip values
+        for card in cards {
+            hand_score.chip_score += card.chip_value();
+        }
+        Ok(hand_score)
+    }
+
+    /// Phase 3: Effects in Hand
+    /// Apply effects from cards in the hand
+    fn apply_effects_in_hand(&self, hand_score: HandScore, _cards: &[Card]) -> GameResult<HandScore> {
+        // TODO: Implement card effects
+        // This includes effects from card enhancements, editions, seals
+        // Cards can modify chips, mult, or trigger special effects
+        Ok(hand_score)
+    }
+
+    /// Phase 4: Joker Scoring
+    /// Apply effects from active jokers
+    fn apply_joker_scoring(&self, mut hand_score: HandScore, cards: &[Card]) -> GameResult<HandScore> {
+        // Convert &[Card] to Vec<&Card> for joker compatibility
         let card_refs: Vec<&Card> = cards.iter().collect();
         
         for joker in &self.jokers {
+            // TODO: Implement full joker effect application
+            // For now, apply basic joker effects
             let (chip_mod, mult_mod) = joker.apply_effects(&card_refs)?;
-            final_score = (final_score + chip_mod as f32) * mult_mod;
+            hand_score.chip_score += chip_mod;
+            hand_score.mult_score *= mult_mod;
         }
         
-        Ok(final_score as i32)
+        Ok(hand_score)
     }
 
     /// End the current round
