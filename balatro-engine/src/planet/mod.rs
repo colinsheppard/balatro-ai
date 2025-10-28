@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use std::collections::HashMap;
 use crate::card::{Card, Rank, Suit};
 use crate::error::{GameError, GameResult};
 use crate::scoring::HandScore;
@@ -63,31 +64,173 @@ impl Planet {
         self.level += 1;
     }
 
-    pub fn detect_poker_hand(
-        &self,
-        poker_hand: PokerHand,
-        sorted_cards: &[Card],
-        rank_counts: &std::collections::HashMap<Rank, usize>,
-        suit_counts: &std::collections::HashMap<Suit, usize>,
-    ) -> bool {
-        // Determine if the provided cards match this planet's poker hand
-        match poker_hand {
-            PokerHand::HighCard => Self::is_high_card(sorted_cards, rank_counts),
-            PokerHand::Pair => Self::is_pair(rank_counts),
-            PokerHand::TwoPair => Self::is_two_pair(rank_counts),
-            PokerHand::ThreeOfAKind => Self::is_three_of_a_kind(rank_counts),
-            PokerHand::Straight => Self::is_straight(sorted_cards),
-            PokerHand::Flush => Self::is_flush(suit_counts),
-            PokerHand::FullHouse => Self::is_full_house(rank_counts),
-            PokerHand::FourOfAKind => Self::is_four_of_a_kind(rank_counts),
-            PokerHand::StraightFlush => Self::is_straight_flush(sorted_cards, rank_counts, suit_counts),
-            PokerHand::FiveOfAKind => Self::is_five_of_a_kind(rank_counts),
-            PokerHand::FlushHouse => Self::is_flush_house(sorted_cards, rank_counts, suit_counts),
-            PokerHand::FlushFive => Self::is_flush_five(sorted_cards, rank_counts, suit_counts),
+    #[allow(dead_code)]
+    fn get_base_score(&self) -> HandScore {
+        let mut hand_score = HandScore::new();
+        hand_score.chip_score = self.base_chips + self.add_chips * (self.level - 1);
+        hand_score.mult_score = (self.base_mult + self.add_mult * (self.level - 1)) as f32;
+        hand_score
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Planets {
+    pub planets: Vec<Planet>,
+    pub planets_by_enum: HashMap<PokerHand, usize>,
+}
+
+impl Default for Planets {
+    fn default() -> Self {
+        Self {
+            planets: Vec::new(),
+            planets_by_enum: HashMap::new(),
+        }
+    }
+}
+
+impl Planets {
+    pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> GameResult<Self> {
+        let content = std::fs::read_to_string(path).map_err(GameError::IoError)?;
+        Self::from_str(&content)
+    }
+
+    pub fn from_str(content: &str) -> GameResult<Self> {
+        let cfg: PlanetFileConfig = toml::from_str(content)
+            .map_err(|e| GameError::InvalidGameState(format!("Planet TOML parsing error: {}", e)))?;
+
+        let mut planets = Vec::new();
+        for def in cfg.planets {
+            let base = def.hand_base_score.get(0).cloned().unwrap_or(PlanetModifier{ mult: 0, chips: 0 });
+            let add = def.addition.get(0).cloned().unwrap_or(PlanetModifier{ mult: 0, chips: 0 });
+            planets.push(Planet {
+                name: def.name,
+                poker_hand: Self::string_to_poker_hand_enum(&def.poker_hand),
+                poker_hand_name: def.poker_hand_name,
+                base_mult: base.mult,
+                base_chips: base.chips,
+                add_mult: add.mult,
+                add_chips: add.chips,
+                level: 1,
+            });
+        }
+        planets.sort_by(|a, b| b.poker_hand.cmp(&a.poker_hand));
+        
+        // Build HashMap for efficient lookup - store indices into the vec
+        let mut planets_by_enum = HashMap::new();
+        for (index, planet) in planets.iter().enumerate() {
+            planets_by_enum.insert(planet.poker_hand, index);
+        }
+        
+        Ok(Self { planets, planets_by_enum })
+    }
+
+    pub fn new_default() -> GameResult<Self> {
+        // Path relative to crate root
+        let default_path = concat!(env!("CARGO_MANIFEST_DIR"), "/.config/planet_data.toml");
+        Self::from_file(default_path)
+    }
+
+    /// Get a reference to a planet by its poker hand type
+    pub fn get_planet(&self, poker_hand: PokerHand) -> Option<&Planet> {
+        self.planets_by_enum
+            .get(&poker_hand)
+            .map(|&index| &self.planets[index])
+    }
+
+    /// Get a mutable reference to a planet by its poker hand type
+    pub fn get_planet_mut(&mut self, poker_hand: PokerHand) -> Option<&mut Planet> {
+        self.planets_by_enum
+            .get(&poker_hand)
+            .map(|&index| &mut self.planets[index])
+    }
+
+    /// Helper function to count ranks
+    fn rank_counts(cards: &[Card]) -> std::collections::HashMap<Rank, usize> {
+        let mut counts = std::collections::HashMap::new();
+        for c in cards {
+            *counts.entry(c.rank).or_insert(0) += 1;
+        }
+        counts
+    }
+
+    /// Helper function to count suits
+    fn suit_counts(cards: &[Card]) -> std::collections::HashMap<Suit, usize> {
+        let mut counts = std::collections::HashMap::new();
+        for c in cards {
+            *counts.entry(c.suit).or_insert(0) += 1;
+        }
+        counts
+    }
+
+    /// Detect poker hand from cards - returns the best matching poker hand type
+    /// Hands are checked in reverse order (rarest to commonest) to find the best match
+    pub fn detect_poker_hand(&self, cards: &[Card]) -> Option<PokerHand> {
+        if cards.is_empty() {
+            return None;
+        }
+
+        // Sort cards by rank
+        let mut sorted_cards = cards.to_vec();
+        sorted_cards.sort_by_key(|c| c.rank as i32);
+
+        // Compute counts once
+        let rank_counts = Self::rank_counts(&sorted_cards);
+        let suit_counts = Self::suit_counts(&sorted_cards);
+
+        // Check composite hands first by evaluating their components
+        let is_five_of_a_kind = Self::is_five_of_a_kind(&rank_counts);
+        let is_flush = Self::is_flush(&suit_counts);
+        if is_five_of_a_kind && is_flush {
+            return Some(PokerHand::FlushFive);
+        }
+        let is_full_house = Self::is_full_house(&rank_counts);
+        if is_full_house && is_flush {
+            return Some(PokerHand::FlushHouse);
+        }
+        if is_five_of_a_kind {
+            return Some(PokerHand::FiveOfAKind);
+        }
+        let is_straight = Self::is_straight(&sorted_cards);
+        if is_straight && is_flush {
+            return Some(PokerHand::StraightFlush);
+        } else if Self::is_four_of_a_kind(&rank_counts) {
+            return Some(PokerHand::FourOfAKind);
+        } else if Self::is_full_house(&rank_counts) {
+            return Some(PokerHand::FullHouse);
+        } else if is_flush {
+            return Some(PokerHand::Flush);
+        } else if is_straight {
+            return Some(PokerHand::Straight);
+        } else if Self::is_three_of_a_kind(&rank_counts) {
+            return Some(PokerHand::ThreeOfAKind);
+        } else if Self::is_two_pair(&rank_counts) {
+            return Some(PokerHand::TwoPair);
+        } else if Self::is_pair(&rank_counts) {
+            return Some(PokerHand::Pair);
+        } else {
+            return Some(PokerHand::HighCard);
         }
     }
 
+    fn string_to_poker_hand_enum(poker_hand_str: &str) -> PokerHand {
+        match poker_hand_str {
+            "high_card" => PokerHand::HighCard,
+            "pair" => PokerHand::Pair,
+            "two_pair" => PokerHand::TwoPair,
+            "three_of_a_kind" => PokerHand::ThreeOfAKind,
+            "straight" => PokerHand::Straight,
+            "flush" => PokerHand::Flush,
+            "full_house" => PokerHand::FullHouse,
+            "four_of_a_kind" => PokerHand::FourOfAKind,
+            "straight_flush" => PokerHand::StraightFlush,
+            "five_of_a_kind" => PokerHand::FiveOfAKind,
+            "flush_house" => PokerHand::FlushHouse,
+            "flush_five" => PokerHand::FlushFive,
+            _ => PokerHand::HighCard, // fallback
+        }
+    }
 
+    #[allow(dead_code)]
     fn is_high_card(_sorted_cards: &[Card], rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
         !rank_counts.values().any(|&n| n >= 2)
     }
@@ -135,6 +278,7 @@ impl Planet {
         rank_counts.values().any(|&n| n == 4)
     }
 
+    #[allow(dead_code)]
     fn is_straight_flush(
         sorted_cards: &[Card],
         _rank_counts: &std::collections::HashMap<Rank, usize>,
@@ -156,145 +300,18 @@ impl Planet {
         rank_counts.values().any(|&n| n >= 5)
     }
 
+    #[allow(dead_code)]
     fn is_flush_house(
         _sorted_cards: &[Card],
         _rank_counts: &std::collections::HashMap<Rank, usize>,
         _suit_counts: &std::collections::HashMap<Suit, usize>,
     ) -> bool { false }
     
+    #[allow(dead_code)]
     fn is_flush_five(
         _sorted_cards: &[Card],
         _rank_counts: &std::collections::HashMap<Rank, usize>,
         _suit_counts: &std::collections::HashMap<Suit, usize>,
     ) -> bool { false }
-
-    fn get_base_score(&self) -> HandScore {
-        let mut hand_score = HandScore::new();
-        hand_score.chip_score = self.base_chips + self.add_chips * (self.level - 1);
-        hand_score.mult_score = (self.base_mult + self.add_mult * (self.level - 1) )as f32;
-        hand_score
-    }
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct Planets {
-    pub planets: Vec<Planet>,
-}
-
-impl Planets {
-    pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> GameResult<Self> {
-        let content = std::fs::read_to_string(path).map_err(GameError::IoError)?;
-        Self::from_str(&content)
-    }
-
-    pub fn from_str(content: &str) -> GameResult<Self> {
-        let cfg: PlanetFileConfig = toml::from_str(content)
-            .map_err(|e| GameError::InvalidGameState(format!("Planet TOML parsing error: {}", e)))?;
-
-        let mut planets = Vec::new();
-        for def in cfg.planets {
-            let base = def.hand_base_score.get(0).cloned().unwrap_or(PlanetModifier{ mult: 0, chips: 0 });
-            let add = def.addition.get(0).cloned().unwrap_or(PlanetModifier{ mult: 0, chips: 0 });
-            planets.push(Planet {
-                name: def.name,
-                poker_hand: Self::string_to_poker_hand_enum(&def.poker_hand),
-                poker_hand_name: def.poker_hand_name,
-                base_mult: base.mult,
-                base_chips: base.chips,
-                add_mult: add.mult,
-                add_chips: add.chips,
-                level: 1,
-            });
-        }
-        planets.sort_by(|a, b| b.poker_hand.cmp(&a.poker_hand));
-        Ok(Self { planets })
-    }
-
-    pub fn new_default() -> GameResult<Self> {
-        // Path relative to crate root
-        let default_path = concat!(env!("CARGO_MANIFEST_DIR"), "/.config/planet_data.toml");
-        Self::from_file(default_path)
-    }
-
-    /// Helper function to count ranks
-    fn rank_counts(cards: &[Card]) -> std::collections::HashMap<Rank, usize> {
-        let mut counts = std::collections::HashMap::new();
-        for c in cards {
-            *counts.entry(c.rank).or_insert(0) += 1;
-        }
-        counts
-    }
-
-    /// Helper function to count suits
-    fn suit_counts(cards: &[Card]) -> std::collections::HashMap<Suit, usize> {
-        let mut counts = std::collections::HashMap::new();
-        for c in cards {
-            *counts.entry(c.suit).or_insert(0) += 1;
-        }
-        counts
-    }
-
-    /// Detect poker hand from cards - returns the best matching poker hand type
-    /// Hands are checked in reverse order (rarest to commonest) to find the best match
-    pub fn detect_poker_hand(&self, cards: &[Card]) -> Option<PokerHand> {
-        if cards.is_empty() {
-            return None;
-        }
-
-        // Sort cards by rank
-        let mut sorted_cards = cards.to_vec();
-        sorted_cards.sort_by_key(|c| c.rank as i32);
-
-        // Compute counts once
-        let rank_counts = Self::rank_counts(&sorted_cards);
-        let suit_counts = Self::suit_counts(&sorted_cards);
-
-        // Check hands in reverse order (rarest to commonest)
-        let hand_order = vec![
-            PokerHand::FlushFive,
-            PokerHand::FlushHouse,
-            PokerHand::FiveOfAKind,
-            PokerHand::StraightFlush,
-            PokerHand::FourOfAKind,
-            PokerHand::FullHouse,
-            PokerHand::Flush,
-            PokerHand::Straight,
-            PokerHand::ThreeOfAKind,
-            PokerHand::TwoPair,
-            PokerHand::Pair,
-            PokerHand::HighCard,
-        ];
-
-        for hand in hand_order {
-            // Find the planet for this hand type
-            if let Some(planet) = self.planets.iter().find(|p| p.poker_hand == hand) {
-                if planet.detect_poker_hand(hand, &sorted_cards, &rank_counts, &suit_counts) {
-                    return Some(hand);
-                }
-            }
-        }
-
-        None
-    }
-
-    fn string_to_poker_hand_enum(poker_hand_str: &str) -> PokerHand {
-        match poker_hand_str {
-            "high_card" => PokerHand::HighCard,
-            "pair" => PokerHand::Pair,
-            "two_pair" => PokerHand::TwoPair,
-            "three_of_a_kind" => PokerHand::ThreeOfAKind,
-            "straight" => PokerHand::Straight,
-            "flush" => PokerHand::Flush,
-            "full_house" => PokerHand::FullHouse,
-            "four_of_a_kind" => PokerHand::FourOfAKind,
-            "straight_flush" => PokerHand::StraightFlush,
-            "five_of_a_kind" => PokerHand::FiveOfAKind,
-            "flush_house" => PokerHand::FlushHouse,
-            "flush_five" => PokerHand::FlushFive,
-            _ => PokerHand::HighCard, // fallback
-        }
-    }
-
-}
-
 
