@@ -2,7 +2,7 @@
 //! 
 //! This module handles the four-phase scoring system for calculating hand scores.
 
-use crate::GameError;
+use crate::{GameError, SharedCard};
 use crate::card::{Card, Enhancement, Edition, Seal};
 use crate::game::GameState;
 use crate::joker::config::{JokerCondition, ActionType};
@@ -78,38 +78,39 @@ fn apply_pre_scoring(game_state: &mut GameState) -> GameResult<()> {
 /// Phase 2: Played Hand Scoring
 /// Evaluate each card in the selected hand
 fn apply_played_hand_scoring(game_state: &mut GameState) -> GameResult<HandScore> {
-    let selected_cards = game_state.hand.borrow().selected_cards_mut();
-    let poker_hand = game_state.planets.detect_poker_hand(&selected_cards).ok_or(GameError::InvalidGameState("No poker hand detected".to_string()))?;
+    let selected_cards = game_state.hand.borrow().selected_cards();
+    let (poker_hand,scoring_cards )= game_state.planets.detect_poker_hand(&selected_cards).ok_or(GameError::InvalidGameState("No poker hand detected".to_string()))?;
     let mut hand_score = game_state.planets.get_planet(poker_hand).ok_or(GameError::InvalidGameState("No planet found for poker hand".to_string()))?.get_base_score();
 
-    for card in selected_cards{
+    for card in scoring_cards{
         // Count retriggers before scoring the card and add 1 for the base card
         let retrigger_count = 1 + count_retriggers(game_state, &card)?;
 
         // Apply retriggers
         for _ in 0..retrigger_count {
-            hand_score = score_card(game_state, &card, hand_score)?;
+            hand_score = score_card(game_state, card.clone(), hand_score)?;
         }
     }
     Ok(hand_score)
 }
 
 /// Score a single card, applying A through F
-fn score_card(game_state: &mut GameState, card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
+fn score_card(game_state: &mut GameState, card: SharedCard, mut hand_score: HandScore) -> GameResult<HandScore> {
     // A - Add Base Card Chips
-    hand_score.chip_score += card.chip_value();
+    hand_score.chip_score += card.borrow().chip_value();
 
     // B - Apply Enhanced Card Effects
-    hand_score = apply_enhanced_card_effects(card, hand_score)?;
+    hand_score = apply_enhanced_card_effects(&card, hand_score)?;
 
     // C - Trigger Card Editions
-    hand_score = apply_card_edition(card, hand_score)?;
+    hand_score = apply_card_edition(&card, hand_score)?;
 
     // D - Trigger Joker Effects (per_card effects)
-    hand_score = apply_per_card_joker_effects(game_state, card, hand_score)?;
+    // Note we clone here because the card could become mutated by the joker effects
+    hand_score = apply_per_card_joker_effects(game_state, card.clone(), hand_score)?;
 
     // E - Gold Seal: if card has gold seal, give $3
-    if let Some(Seal::Gold) = card.seal {
+    if let Some(Seal::Gold) = card.borrow().seal {
         game_state.money += 3;
     }
 
@@ -119,8 +120,8 @@ fn score_card(game_state: &mut GameState, card: &Card, mut hand_score: HandScore
 }
 
 /// Apply enhanced card effects (Step B)
-fn apply_enhanced_card_effects(card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
-    if let Some(enhancement) = &card.enhancement {
+fn apply_enhanced_card_effects(card: &SharedCard, mut hand_score: HandScore) -> GameResult<HandScore> {
+    if let Some(enhancement) = &card.borrow().enhancement {
         match enhancement {
             Enhancement::Bonus => {
                 hand_score.chip_score += 30;
@@ -152,8 +153,8 @@ fn apply_enhanced_card_effects(card: &Card, mut hand_score: HandScore) -> GameRe
 }
 
 /// Apply card edition effects (Step C)
-fn apply_card_edition(card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
-    match card.edition {
+fn apply_card_edition(card: &SharedCard, mut hand_score: HandScore) -> GameResult<HandScore> {
+    match card.borrow().edition {
         Edition::Foil => {
             hand_score.chip_score += 50;
         }
@@ -174,7 +175,7 @@ fn apply_card_edition(card: &Card, mut hand_score: HandScore) -> GameResult<Hand
 }
 
 /// Apply per_card joker effects (Step D)
-fn apply_per_card_joker_effects(game_state: &GameState, card: &Card, mut hand_score: HandScore) -> GameResult<HandScore> {
+fn apply_per_card_joker_effects(game_state: &GameState, card: SharedCard, mut hand_score: HandScore) -> GameResult<HandScore> {
     
     for joker in &game_state.jokers {
         // Check if this joker has a conditional effect that is per_card
@@ -191,11 +192,11 @@ fn apply_per_card_joker_effects(game_state: &GameState, card: &Card, mut hand_sc
 }
 
 /// Count the number of retriggers for a card
-fn count_retriggers(game_state: &GameState, card: &Card) -> GameResult<usize> {
+fn count_retriggers(game_state: &GameState, card: &SharedCard) -> GameResult<usize> {
     let mut retrigger_count = 0;
 
     // Check if card has red seal
-    if let Some(Seal::Red) = card.seal {
+    if let Some(Seal::Red) = card.borrow().seal {
         retrigger_count += 1;
     }
 
@@ -243,7 +244,7 @@ fn apply_card_effects_in_hand(game_state: &GameState, card: &Card, mut hand_scor
     }
 
     // B - Joker Effects: Jokers triggered by cards held in hand
-    let selected_cards: Vec<Card> = game_state.hand.borrow().selected_cards_mut();
+    let selected_cards: Vec<SharedCard> = game_state.hand.borrow().selected_cards();
     for joker in &game_state.jokers {
         // TODO: Check if joker should be triggered by cards in hand
         // This would be jokers with conditional effects that check for held cards
@@ -284,7 +285,7 @@ fn count_retriggers_in_hand(game_state: &GameState, card: &Card) -> GameResult<u
 /// Apply effects from active jokers
 fn apply_joker_scoring(game_state: &GameState, mut hand_score: HandScore) -> GameResult<HandScore> {
     
-    let selected_cards: Vec<Card> = game_state.hand.borrow().selected_cards_mut();
+    let selected_cards: Vec<SharedCard> = game_state.hand.borrow().selected_cards();
     for joker in &game_state.jokers {
         // TODO: Implement full joker effect application
         // For now, apply basic joker effects

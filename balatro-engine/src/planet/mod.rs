@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
+use crate::{SharedCard, Utilities};
 use crate::card::{Card, Rank, Suit};
 use crate::error::{GameError, GameResult};
 use crate::scoring::HandScore;
@@ -69,6 +70,21 @@ impl Planet {
         hand_score.chip_score = self.base_chips + self.add_chips * (self.level - 1);
         hand_score.mult_score = (self.base_mult + self.add_mult * (self.level - 1)) as f32;
         hand_score
+    }
+}
+
+struct CountAndCards{
+    pub count: usize,
+    pub cards: Vec<SharedCard>,
+}
+impl CountAndCards {
+    pub fn new(card: SharedCard) -> Self {
+        let mut _cards = Vec::new();
+        _cards.push(card);
+        Self { count: 0, cards: _cards }
+    }
+    pub fn add_card(&mut self, card: SharedCard) {
+        self.cards.push(card);
     }
 }
 
@@ -144,70 +160,89 @@ impl Planets {
     }
 
     /// Helper function to count ranks
-    fn rank_counts(cards: &[Card]) -> std::collections::HashMap<Rank, usize> {
+    fn rank_counts(cards: &[SharedCard]) -> std::collections::HashMap<Rank, CountAndCards> {
         let mut counts = std::collections::HashMap::new();
         for c in cards {
-            *counts.entry(c.rank).or_insert(0) += 1;
+            let entry = counts.entry(c.borrow().rank).or_insert(CountAndCards::new(c.clone()));
+            entry.add_card(c.clone());
+            entry.count += 1;
         }
         counts
     }
 
     /// Helper function to count suits
-    fn suit_counts(cards: &[Card]) -> std::collections::HashMap<Suit, usize> {
+    fn suit_counts(cards: &[SharedCard]) -> std::collections::HashMap<Suit, CountAndCards> {
         let mut counts = std::collections::HashMap::new();
         for c in cards {
-            *counts.entry(c.suit).or_insert(0) += 1;
+            let entry = counts.entry(c.borrow().suit).or_insert(CountAndCards::new(c.clone()));
+            entry.add_card(c.clone());
+            entry.count += 1;
         }
         counts
     }
 
     /// Detect poker hand from cards - returns the best matching poker hand type
     /// Hands are checked in reverse order (rarest to commonest) to find the best match
-    pub fn detect_poker_hand(&self, cards: &[Card]) -> Option<PokerHand> {
+    pub fn detect_poker_hand(&self, cards: &[SharedCard]) -> Option<(PokerHand,Vec<SharedCard>)> {
         if cards.is_empty() {
             return None;
         }
 
         // Sort cards by rank
         let mut sorted_cards = cards.to_vec();
-        sorted_cards.sort_by_key(|c| c.rank as i32);
+        sorted_cards.sort_by_key(|c| c.borrow().rank as i32);
 
         // Compute counts once
         let rank_counts = Self::rank_counts(&sorted_cards);
         let suit_counts = Self::suit_counts(&sorted_cards);
 
         // Check composite hands first by evaluating their components
-        let is_five_of_a_kind = Self::is_five_of_a_kind(&rank_counts);
-        let is_flush = Self::is_flush(&suit_counts);
+        let is_five_of_a_kind = Self::is_n_of_a_kind(&rank_counts, 5);
+        let is_flush = Self::is_flush_of_n(&suit_counts, 5);
         if is_five_of_a_kind && is_flush {
-            return Some(PokerHand::FlushFive);
+            return Some((PokerHand::FlushFive, sorted_cards));
         }
         let is_full_house = Self::is_full_house(&rank_counts);
         if is_full_house && is_flush {
-            return Some(PokerHand::FlushHouse);
+            return Some((PokerHand::FlushHouse, sorted_cards));
         }
         if is_five_of_a_kind {
-            return Some(PokerHand::FiveOfAKind);
+            return Some((PokerHand::FiveOfAKind, sorted_cards));
         }
-        let is_straight = Self::is_straight(&sorted_cards);
+        let straight_cards = Self::is_straight_of_n(&sorted_cards, 5);
+        let is_straight = straight_cards.is_some();
         if is_straight && is_flush {
-            return Some(PokerHand::StraightFlush);
-        } else if Self::is_four_of_a_kind(&rank_counts) {
-            return Some(PokerHand::FourOfAKind);
-        } else if Self::is_full_house(&rank_counts) {
-            return Some(PokerHand::FullHouse);
+            return Some((PokerHand::StraightFlush, sorted_cards));
+        } else if Self::is_n_of_a_kind(&rank_counts, 4) {
+            let scoring_cards = Self::find_n_of_a_kind(&rank_counts, 4);
+            return Some((PokerHand::FourOfAKind, scoring_cards));
+        } 
+        let is_three_of_a_kind = Self::is_n_of_a_kind(&rank_counts, 3);
+        let is_pair = Self::is_n_of_a_kind(&rank_counts, 2);
+        if is_three_of_a_kind && is_pair {
+            return Some((PokerHand::FullHouse, sorted_cards));
         } else if is_flush {
-            return Some(PokerHand::Flush);
+            // TODO: leave this branch here for when we implement Four Fingers effect
+            if true {
+                return Some((PokerHand::Flush, sorted_cards));
+            }else{
+                let scoring_cards = Self::find_flush_of_n(&suit_counts, 4);
+                return Some((PokerHand::Flush, scoring_cards));
+            }
         } else if is_straight {
-            return Some(PokerHand::Straight);
-        } else if Self::is_three_of_a_kind(&rank_counts) {
-            return Some(PokerHand::ThreeOfAKind);
+            return Some((PokerHand::Straight, straight_cards.unwrap()));
+        } else if is_three_of_a_kind {
+            let scoring_cards = Self::find_n_of_a_kind(&rank_counts, 3);
+            return Some((PokerHand::ThreeOfAKind, scoring_cards));
         } else if Self::is_two_pair(&rank_counts) {
-            return Some(PokerHand::TwoPair);
-        } else if Self::is_pair(&rank_counts) {
-            return Some(PokerHand::Pair);
+            let scoring_cards = Self::find_n_of_a_kind(&rank_counts, 2);
+            return Some((PokerHand::TwoPair, scoring_cards));
+        } else if is_pair {
+            let scoring_cards = Self::find_n_of_a_kind(&rank_counts, 2);
+            return Some((PokerHand::Pair, scoring_cards));
         } else {
-            return Some(PokerHand::HighCard);
+            let scoring_cards = Self::find_high_card(&sorted_cards);
+            return Some((PokerHand::HighCard, scoring_cards));
         }
     }
 
@@ -229,88 +264,51 @@ impl Planets {
         }
     }
 
-    #[allow(dead_code)]
-    fn is_high_card(_sorted_cards: &[Card], rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
-        !rank_counts.values().any(|&n| n >= 2)
+    fn is_n_of_a_kind(rank_counts: &std::collections::HashMap<Rank, CountAndCards>, n: usize) -> bool {
+        rank_counts.values().any(|c| c.count == n)
+    }
+    fn find_n_of_a_kind(rank_counts: &std::collections::HashMap<Rank, CountAndCards>, n: usize) -> Vec<SharedCard> {
+        rank_counts.values().filter(|c| c.count == n).map(|c| c.cards.clone()).flatten().collect()
+    }
+    fn is_two_pair(rank_counts: &std::collections::HashMap<Rank, CountAndCards>) -> bool {
+        rank_counts.values().filter(|c| c.count == 2).count() >= 2
+    }
+    fn find_flush_of_n(suit_counts: &std::collections::HashMap<Suit, CountAndCards>, n: usize) -> Vec<SharedCard> {
+        suit_counts.values().filter(|c| c.count == n).map(|c| c.cards.clone()).flatten().collect()
+    }
+    fn find_high_card(sorted_cards: &[SharedCard]) -> Vec<SharedCard> {
+        // Highest rank card should be used for High Card scoring
+        vec![sorted_cards.last().cloned().unwrap()]
     }
 
-    fn is_pair(rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
-        rank_counts.values().any(|&n| n == 2)
-    }
-
-    fn is_two_pair(rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
-        rank_counts.values().filter(|&&n| n == 2).count() >= 2
-    }
-
-    fn is_three_of_a_kind(rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
-        rank_counts.values().any(|&n| n == 3)
-    }
-
-    fn is_straight(sorted_cards: &[Card]) -> bool {
-        if sorted_cards.len() < 5 { return false; }
+    //TODO: This is not correct, does not treat Ace as low and high
+    fn is_straight_of_n(sorted_cards: &[SharedCard], n: usize) -> Option<Vec<SharedCard>> {
+        if sorted_cards.len() < n { return None; }
         // Treat Ace high straight only for now
-        let mut ranks: Vec<i32> = sorted_cards.iter().map(|c| c.rank as i32).collect();
+        let mut ranks: Vec<i32> = sorted_cards.iter().map(|c| c.borrow().rank as i32).collect();
         ranks.sort_unstable();
         ranks.dedup();
         // Check any window of size 5
         for window in ranks.windows(5) {
             let mut ok = true;
-            for i in 1..5 {
+            for i in 1..n {
                 if window[i] != window[i-1] + 1 { ok = false; break; }
             }
-            if ok { return true; }
+            if ok { 
+                return Some(sorted_cards.iter().filter(|c| window.contains(&(c.borrow().rank as i32))).cloned().collect()); 
+            }
         }
-        false
+        None
     }
 
-    fn is_flush(suit_counts: &std::collections::HashMap<Suit, usize>) -> bool {
-        suit_counts.values().any(|&n| n >= 5)
+    fn is_flush_of_n(suit_counts: &std::collections::HashMap<Suit, CountAndCards>, n: usize) -> bool {
+        suit_counts.values().any(|c| c.count >= n)
     }
 
-    fn is_full_house(rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
-        let has_three = rank_counts.values().any(|&n| n == 3);
-        let has_pair = rank_counts.values().filter(|&&n| n >= 2).count() >= 2 || rank_counts.values().any(|&n| n == 2);
+    fn is_full_house(rank_counts: &std::collections::HashMap<Rank, CountAndCards>) -> bool {
+        let has_three = Self::is_n_of_a_kind(rank_counts, 3);
+        let has_pair = Self::is_n_of_a_kind(rank_counts, 2);
         has_three && has_pair
     }
-
-    fn is_four_of_a_kind(rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
-        rank_counts.values().any(|&n| n == 4)
-    }
-
-    #[allow(dead_code)]
-    fn is_straight_flush(
-        sorted_cards: &[Card],
-        _rank_counts: &std::collections::HashMap<Rank, usize>,
-        suit_counts: &std::collections::HashMap<Suit, usize>,
-    ) -> bool {
-        // Check flush first
-        if !suit_counts.values().any(|&n| n >= 5) {
-            return false;
-        }
-        // Filter to the suit with >=5 cards and check straight within that suit
-        if let Some((&suit, _)) = suit_counts.iter().find(|(_, n)| **n >= 5) {
-            let suited: Vec<Card> = sorted_cards.iter().filter(|c| c.suit == suit).cloned().collect();
-            return !suited.is_empty() && Self::is_straight(&suited);
-        }
-        false
-    }
-
-    fn is_five_of_a_kind(rank_counts: &std::collections::HashMap<Rank, usize>) -> bool {
-        rank_counts.values().any(|&n| n >= 5)
-    }
-
-    #[allow(dead_code)]
-    fn is_flush_house(
-        _sorted_cards: &[Card],
-        _rank_counts: &std::collections::HashMap<Rank, usize>,
-        _suit_counts: &std::collections::HashMap<Suit, usize>,
-    ) -> bool { false }
-    
-    #[allow(dead_code)]
-    fn is_flush_five(
-        _sorted_cards: &[Card],
-        _rank_counts: &std::collections::HashMap<Rank, usize>,
-        _suit_counts: &std::collections::HashMap<Suit, usize>,
-    ) -> bool { false }
 }
 

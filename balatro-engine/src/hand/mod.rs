@@ -3,7 +3,7 @@
 use serde::Serialize;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::Deck;
+use crate::{Deck, SharedDeck};
 use crate::card::{Card, SharedCard};
 use crate::error::{GameError, GameResult};
 
@@ -70,7 +70,7 @@ impl Hand {
         self.cards.push(card);
     }
 
-    pub fn discard_selected_cards(&mut self, deck: &mut Deck) -> GameResult<()> {
+    pub fn discard_selected_cards(&mut self, deck: SharedDeck) -> GameResult<()> {
         if self.selected_indices.is_empty() {
             return Err(GameError::InvalidGameState("No cards selected to discard".to_string()));
         }
@@ -81,12 +81,10 @@ impl Hand {
         
         for index in indices_to_remove {
             let card = self.remove_card(index)?;
-            deck.discard(card);
+            deck.borrow_mut().discard(card);
         }
         Ok(())
     }
-
-
 
     /// Remove a card by index and return it
     pub fn remove_card(&mut self, index: usize) -> GameResult<SharedCard> {
@@ -144,29 +142,14 @@ impl Hand {
     }
 
     /// Get selected cards
-    pub fn selected_cards(&self) -> Vec<&SharedCard> {
-        self.selected_indices.iter()
-            .filter_map(|&i| self.cards.get(i))
-            .collect()
-    }
-
-    /// Get selected cards cloned
-    pub fn selected_cards_cloned(&self) -> Vec<SharedCard> {
+    pub fn selected_cards(&self) -> Vec<SharedCard> {
         self.selected_indices.iter()
             .filter_map(|&i| self.cards.get(i).cloned())
             .collect()
     }
 
-    /// Get selected cards as cloned Card values (for scoring)
-    pub fn selected_cards_mut(&self) -> Vec<Card> {
-        self.selected_indices.iter()
-            .filter_map(|&i| self.cards.get(i))
-            .map(|shared| shared.borrow().clone())
-            .collect()
-    }
-
     /// Get unselected cards in order (left to right)
-    pub fn get_unselected_cards(&self) -> Vec<&SharedCard> {
+    pub fn get_unselected_cards(&self) -> Vec<SharedCard> {
         let selected_indices_set: std::collections::HashSet<usize> = 
             self.selected_indices.iter().copied().collect();
         
@@ -174,7 +157,7 @@ impl Hand {
             .iter()
             .enumerate()
             .filter(|(idx, _)| !selected_indices_set.contains(idx))
-            .map(|(_, card)| card)
+            .map(|(_, card)| card.clone())
             .collect()
     }
 

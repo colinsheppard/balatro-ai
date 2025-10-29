@@ -75,7 +75,6 @@ pub struct Card {
     pub enhancement: Option<Enhancement>,
     pub edition: Edition,
     pub seal: Option<Seal>,
-    pub is_scoring: bool,
 }
 
 impl Card {
@@ -88,7 +87,6 @@ impl Card {
             enhancement: None,
             edition: Edition::Base,
             seal: None,
-            is_scoring: false,
         }
     }
 

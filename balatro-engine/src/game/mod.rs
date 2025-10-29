@@ -142,7 +142,7 @@ impl GameState {
         self.score = final_score;
         
         // Remove played cards from hand
-        self.hand.borrow_mut().discard_selected_cards(&mut *self.deck.borrow_mut())?;
+        self.hand.borrow_mut().discard_selected_cards(self.deck.clone());
 
         Ok(final_score)
     }
