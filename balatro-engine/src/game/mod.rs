@@ -1,18 +1,14 @@
 //! Main game state and logic for Balatro game engine
 
 use serde::{Deserialize, Serialize};
-use std::rc::Rc;
-use std::cell::RefCell;
-use crate::SharedRngManager;
+use crate::{Consumables, Jokers, SharedHand, SharedRngManager};
 use crate::hand::Hand;
 use crate::deck::{Deck, DeckType, SharedDeck};
-use crate::joker::JokerInstance;
 use crate::planet::Planets;
 use crate::stakes::{Stake, StakeLevel};
 use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor};
-use crate::consumable::Consumable;
 use crate::error::{GameError, GameResult};
-use crate::rng::GameRngManager;
+use crate::card::SharedCard;
 
 /// Current game phase
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,10 +33,10 @@ pub struct GameState {
     pub score: i32,
     pub deck: SharedDeck,
     pub stake: Stake,
-    pub jokers: Vec<JokerInstance>,
-    pub hand: Hand,
+    pub jokers: Jokers,
+    pub hand: SharedHand,
     pub upcoming_blinds: UpcomingBlinds,
-    pub consumables: Vec<Consumable>,
+    pub consumables: Consumables,
     pub round_number: u32,
     pub planets: Planets,
 }
@@ -73,10 +69,10 @@ impl GameState {
             score: 0,
             deck: deck_ref,
             stake,
-            jokers: Vec::new(),
+            jokers: Jokers::new(),
             hand: Hand::new(),
             upcoming_blinds,
-            consumables: Vec::new(),
+            consumables: Consumables::new(),
             round_number: 1,
             planets: Planets::new_default().unwrap_or_default(),
         }
@@ -107,10 +103,10 @@ impl GameState {
             score: 0,
             deck: deck_ref,
             stake,
-            jokers: Vec::new(),
+            jokers: Jokers::new(),
             hand: Hand::new(),
             upcoming_blinds,
-            consumables: Vec::new(),
+            consumables: Consumables::new(),
             round_number: 1,
             planets: Planets::new_default().unwrap_or_default(),
         }
@@ -118,20 +114,20 @@ impl GameState {
 
     /// Draw cards to fill the hand after clearing it out first
     pub fn clear_and_draw_hand(&mut self) -> GameResult<()> {
-        self.hand.clear();
+        self.hand.borrow_mut().clear();
         self.draw_hand()?;
-        self.hand.sort_by_rank_desc();
+        self.hand.borrow_mut().sort_by_rank_desc();
         Ok(())
     }
 
     /// Draw cards to fill the hand
     pub fn draw_hand(&mut self) -> GameResult<()> {
-        if self.hand.len() >= self.hand_size {
+        if self.hand.borrow().len() >= self.hand_size {
             return Err(GameError::InvalidGameState("Hand is already full".to_string()));
         }
-        let cards = self.deck.borrow_mut().draw_multiple(self.hand_size - self.hand.len())?;
+        let cards: Vec<SharedCard> = self.deck.borrow_mut().draw_multiple(self.hand_size - self.hand.borrow().len())?;
         for card in cards {
-            self.hand.add_card(card);
+            self.hand.borrow_mut().add_card(card);
         }
         Ok(())
     }
@@ -146,7 +142,7 @@ impl GameState {
         self.score = final_score;
         
         // Remove played cards from hand
-        self.hand.discard_selected_cards(&mut *self.deck.borrow_mut())?;
+        self.hand.borrow_mut().discard_selected_cards(&mut *self.deck.borrow_mut())?;
 
         Ok(final_score)
     }

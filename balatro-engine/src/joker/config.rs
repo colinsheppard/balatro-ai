@@ -282,20 +282,20 @@ impl JokerInstance {
     }
 
     /// Apply this joker's effects to a card
-    pub fn apply_per_card_effects(&self, card: crate::card::Card) -> GameResult<(i32, f32)> {
+    pub fn apply_per_card_effects(&self, _card: crate::card::Card) -> GameResult<(i32, f32)> {
         // This will be implemented with the full effect system
         // For now, return base values
         Ok((0, 1.0))
     }
 
     /// Apply this joker's effects to a hand
-    pub fn apply_played_hand_effects(&self, cards: Vec<crate::card::Card>) -> GameResult<(i32, f32)> {
+    pub fn apply_played_hand_effects(&self, _cards: Vec<crate::card::Card>) -> GameResult<(i32, f32)> {
         // This will be implemented with the full effect system
         // For now, return base values
         Ok((0, 1.0))
     }
 
-    pub fn apply_in_hand_effects(&self, cards: Vec<crate::card::Card>) -> GameResult<(i32, f32)> {
+    pub fn apply_in_hand_effects(&self, _cards: Vec<crate::card::Card>) -> GameResult<(i32, f32)> {
         // This will be implemented with the full effect system
         // For now, return base values
         Ok((0, 1.0))

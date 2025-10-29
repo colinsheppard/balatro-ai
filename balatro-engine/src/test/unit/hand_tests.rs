@@ -13,8 +13,8 @@ fn create_test_card(suit: Suit, rank: Rank) -> Card {
 #[test]
 fn test_hand_creation() {
     let hand = Hand::new();
-    assert!(hand.is_empty());
-    assert_eq!(hand.len(), 0);
+    assert!(hand.borrow().is_empty());
+    assert_eq!(hand.borrow().len(), 0);
 }
 
 #[test]
@@ -33,15 +33,15 @@ fn test_hand_with_cards() {
 
 #[test]
 fn test_add_and_remove_cards() {
-    let mut hand = Hand::new();
+    let hand = Hand::new();
     let card = Rc::new(RefCell::new(create_test_card(Suit::Hearts, Rank::Ace)));
     
-    hand.add_card(card.clone());
-    assert_eq!(hand.len(), 1);
+    hand.borrow_mut().add_card(card.clone());
+    assert_eq!(hand.borrow().len(), 1);
     
-    let removed_card = hand.remove_card(0).unwrap();
+    let removed_card = hand.borrow_mut().remove_card(0).unwrap();
     assert_eq!(removed_card.borrow().id, card.borrow().id);
-    assert!(hand.is_empty());
+    assert!(hand.borrow().is_empty());
 }
 
 #[test]
@@ -188,14 +188,14 @@ fn test_selection_persistence_after_move() {
 
 #[test]
 fn test_error_handling() {
-    let mut hand = Hand::new();
+    let hand = Hand::new();
     
     // Test out of bounds access
-    assert!(hand.get(0).is_none());
-    assert!(hand.remove_card(0).is_err());
-    assert!(hand.select_card(0).is_err());
-    assert!(hand.move_left(0).is_err());
-    assert!(hand.move_right(0).is_err());
+    assert!(hand.borrow().get(0).is_none());
+    assert!(hand.borrow_mut().remove_card(0).is_err());
+    assert!(hand.borrow_mut().select_card(0).is_err());
+    assert!(hand.borrow_mut().move_left(0).is_err());
+    assert!(hand.borrow_mut().move_right(0).is_err());
 }
 
 #[test]
@@ -248,7 +248,7 @@ fn test_from_into_conversions() {
         create_test_card(Suit::Spades, Rank::King),
     ];
     
-    // Test From<Vec<Card>> for Hand
+    // Test From<Vec<Card>> for Hand  
     let hand = Hand::from(cards.clone());
     assert_eq!(hand.len(), 2);
     

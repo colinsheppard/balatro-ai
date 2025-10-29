@@ -13,7 +13,7 @@ pub fn display_game_state(game_state: &GameState) {
     println!("Money: ${}", game_state.money);
     println!("Hand Size: {}", game_state.hand_size);
     let mut jokers_line = String::from("");
-    for (i, joker) in game_state.jokers.iter().enumerate() {
+    for joker in game_state.jokers.iter() {
         jokers_line.push_str(&format!("{} ", joker));
     }
     println!("Jokers ({}): {}", game_state.jokers.len(), jokers_line);
@@ -77,8 +77,9 @@ pub fn display_playing_phase_state(game_state: &GameState) {
     
     
     // Display hand in horizontal layout with selection info
-    let selected_indices: std::collections::HashSet<usize> = game_state.hand.selected_indices().iter().copied().collect();
-    let cards = game_state.hand.cards();
+    let binding = game_state.hand.borrow();
+    let selected_indices: std::collections::HashSet<usize> = binding.selected_indices().iter().copied().collect();
+    let cards = binding.cards();
     
     // Collect cards by selection status, maintaining position
     let mut selected_line =   String::from("selected:   ");
@@ -147,8 +148,8 @@ pub fn display_blind_select_actions(game_state: &GameState) {
 
 /// Display available Playing actions
 pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, crate::actions::PlayingAction)]) {
-    let cards = game_state.hand.cards();
-    let selected_indices: Vec<usize> = game_state.hand.selected_indices().iter().copied().collect();
+    let binding = game_state.hand.borrow();
+    let cards = binding.cards();
     
     println!("\nAvailable Actions:");
     
@@ -161,10 +162,10 @@ pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, c
                 println!("{}: {}", action_num, action);
             }
             crate::actions::PlayingAction::SortByRank => {
-                println!("{}: {}", action_num, action);
+                println!("{}: Sort by rank", action_num);
             }
             crate::actions::PlayingAction::SortBySuit => {
-                println!("{}: {}", action_num, action);
+                println!("{}: Sort by suit", action_num);
             }
             crate::actions::PlayingAction::SelectCard(card_idx) => {
                 println!("{}: Select {}", action_num, *cards[*card_idx].borrow());
@@ -177,12 +178,6 @@ pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, c
             }
             crate::actions::PlayingAction::MoveLeft(card_idx) => {
                 println!("{}: Move left {}", action_num, *cards[*card_idx].borrow());
-            }
-            crate::actions::PlayingAction::SortByRank => {
-                println!("{}: Sort by rank", action_num);
-            }
-            crate::actions::PlayingAction::SortBySuit => {
-                println!("{}: Sort by suit", action_num);
             }
         }
     }

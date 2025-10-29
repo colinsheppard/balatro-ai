@@ -386,8 +386,9 @@ pub mod helpers {
     /// Create all playing actions based on current hand state
     pub fn create_playing_actions(game_state: &crate::GameState) -> Vec<(u32, PlayingAction)> {
         use std::collections::HashSet;
-        let cards = game_state.hand.cards();
-        let selected_indices = game_state.hand.selected_indices();
+        let binding = game_state.hand.borrow();
+        let cards = binding.cards();
+        let selected_indices = binding.selected_indices();
         let selected_set: HashSet<usize> = selected_indices.iter().copied().collect();
 
         let mut actions = Vec::new();

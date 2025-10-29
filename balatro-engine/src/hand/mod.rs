@@ -1,12 +1,13 @@
 //! Hand management system for Balatro game engine
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::{Deck, SharedCard};
-use crate::card::{Card, Suit, Rank};
+use crate::Deck;
+use crate::card::{Card, SharedCard};
 use crate::error::{GameError, GameResult};
 
+pub type SharedHand = Rc<RefCell<Hand>>;
 /// A playing hand with advanced card management capabilities
 #[derive(Debug, Clone)]
 #[derive(Serialize)]
@@ -18,11 +19,11 @@ pub struct Hand {
 
 impl Hand {
     /// Create a new empty hand
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> SharedHand{
+        Rc::new(RefCell::new(Self {
             cards: Vec::new(),
             selected_indices: Vec::new(),
-        }
+        }))
     }
 
     /// Create a hand with the given cards
@@ -324,8 +325,8 @@ impl Hand {
 }
 
 impl Default for Hand {
-    fn default() -> Self {
-        Self::new()
+    fn default() -> Hand {
+        Self::new().borrow().clone()
     }
 }
 

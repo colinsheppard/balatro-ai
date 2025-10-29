@@ -15,7 +15,7 @@ fn test_game_state_creation() {
     assert_eq!(game_state.money, 4);
     assert_eq!(game_state.score, 0);
     assert_eq!(game_state.jokers.len(), 0);
-    assert_eq!(game_state.hand.len(), 0);
+    assert_eq!(game_state.hand.borrow().len(), 0);
     assert_eq!(game_state.round_number, 1);
 }
 
@@ -26,7 +26,7 @@ fn test_drawing_hand() {
     game_state.hand_size = 5;
     
     game_state.draw_hand().unwrap();
-    assert_eq!(game_state.hand.len(), 5);
+    assert_eq!(game_state.hand.borrow().len(), 5);
     assert_eq!(game_state.deck.borrow().remaining_cards(), 47);
 }
 
@@ -38,13 +38,13 @@ fn test_playing_hand() {
     game_state.draw_hand().unwrap();
     
     // Play first 3 cards
-    game_state.hand.select_card(0).unwrap();
-    game_state.hand.select_card(1).unwrap();
-    game_state.hand.select_card(2).unwrap();
+    game_state.hand.borrow_mut().select_card(0).unwrap();
+    game_state.hand.borrow_mut().select_card(1).unwrap();
+    game_state.hand.borrow_mut().select_card(2).unwrap();
     let score = game_state.play_hand().unwrap();
     
     assert!(score > 0); // Should have some score
-    assert_eq!(game_state.hand.len(), 2); // Should have 2 cards left
+    assert_eq!(game_state.hand.borrow().len(), 2); // Should have 2 cards left
 }
 
 #[test]

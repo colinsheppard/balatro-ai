@@ -4,7 +4,7 @@
 
 use crate::GameError;
 use crate::card::{Card, Enhancement, Edition, Seal};
-use crate::game::{self, GameState};
+use crate::game::GameState;
 use crate::joker::config::{JokerCondition, ActionType};
 use crate::error::GameResult;
 
@@ -39,7 +39,7 @@ impl Default for HandScore {
 /// Detailed explanation of the scoring process is here:
 /// https://www.reddit.com/r/balatro/comments/1blbexa/detailed_break_down_of_balatro_scoring_system_and/
 pub fn calculate_hand_score(game_state: &mut GameState) -> GameResult<HandScore> {
-    if game_state.hand.selected_indices().is_empty() {
+    if game_state.hand.borrow().selected_indices().is_empty() {
         return Err(crate::error::GameError::InvalidGameState("Cannot play empty hand".to_string()));
     }
 
@@ -78,7 +78,7 @@ fn apply_pre_scoring(game_state: &mut GameState) -> GameResult<()> {
 /// Phase 2: Played Hand Scoring
 /// Evaluate each card in the selected hand
 fn apply_played_hand_scoring(game_state: &mut GameState) -> GameResult<HandScore> {
-    let selected_cards = game_state.hand.selected_cards_mut();
+    let selected_cards = game_state.hand.borrow().selected_cards_mut();
     let poker_hand = game_state.planets.detect_poker_hand(&selected_cards).ok_or(GameError::InvalidGameState("No poker hand detected".to_string()))?;
     let mut hand_score = game_state.planets.get_planet(poker_hand).ok_or(GameError::InvalidGameState("No planet found for poker hand".to_string()))?.get_base_score();
 
@@ -217,7 +217,8 @@ fn count_retriggers(game_state: &GameState, card: &Card) -> GameResult<usize> {
 /// Process unselected cards from left to right
 fn apply_effects_in_hand(game_state: &mut GameState, mut hand_score: HandScore) -> GameResult<HandScore> {
     // Get unselected cards in order (left to right)
-    let unselected_cards = game_state.hand.get_unselected_cards();
+    let binding = game_state.hand.borrow();
+    let unselected_cards = binding.get_unselected_cards();
 
     // Process each unselected card left to right
     for card_shared in unselected_cards {
@@ -242,7 +243,7 @@ fn apply_card_effects_in_hand(game_state: &GameState, card: &Card, mut hand_scor
     }
 
     // B - Joker Effects: Jokers triggered by cards held in hand
-    let selected_cards: Vec<Card> = game_state.hand.selected_cards_mut();
+    let selected_cards: Vec<Card> = game_state.hand.borrow().selected_cards_mut();
     for joker in &game_state.jokers {
         // TODO: Check if joker should be triggered by cards in hand
         // This would be jokers with conditional effects that check for held cards
@@ -283,7 +284,7 @@ fn count_retriggers_in_hand(game_state: &GameState, card: &Card) -> GameResult<u
 /// Apply effects from active jokers
 fn apply_joker_scoring(game_state: &GameState, mut hand_score: HandScore) -> GameResult<HandScore> {
     
-    let selected_cards: Vec<Card> = game_state.hand.selected_cards_mut();
+    let selected_cards: Vec<Card> = game_state.hand.borrow().selected_cards_mut();
     for joker in &game_state.jokers {
         // TODO: Implement full joker effect application
         // For now, apply basic joker effects
