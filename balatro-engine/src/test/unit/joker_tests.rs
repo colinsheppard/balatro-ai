@@ -2,6 +2,7 @@
 
 use crate::joker::{JokerManager, JokerRarity, JokerEdition, JokerSticker};
 use crate::card::{Card, Suit, Rank};
+use crate::test::to_shared;
 
 #[test]
 fn test_joker_manager_from_str() {
@@ -266,10 +267,10 @@ mult = 4
     let ace = Card::new(Suit::Hearts, Rank::Ace);
     let king = Card::new(Suit::Spades, Rank::King);
 
-    let cards = vec![
+    let cards = to_shared(vec![
        ace,
        king,
-    ];
+    ]);
 
     let (chip_mod, mult_mod) = joker.apply_played_hand_effects(cards).unwrap();
     assert_eq!(chip_mod, 0);

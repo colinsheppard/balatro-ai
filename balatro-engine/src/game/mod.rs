@@ -139,7 +139,7 @@ impl GameState {
         
         // Calculate final score
         let final_score = hand_score.final_score() as i32;
-        self.score = final_score;
+        self.score += final_score;
         
         // Remove played cards from hand
         self.hand.borrow_mut().discard_selected_cards(self.deck.clone());

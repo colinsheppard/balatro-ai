@@ -81,7 +81,7 @@ impl CountAndCards {
     pub fn new(card: SharedCard) -> Self {
         let mut _cards = Vec::new();
         _cards.push(card);
-        Self { count: 0, cards: _cards }
+        Self { count: 1, cards: _cards }
     }
     pub fn add_card(&mut self, card: SharedCard) {
         self.cards.push(card);
@@ -163,9 +163,10 @@ impl Planets {
     fn rank_counts(cards: &[SharedCard]) -> std::collections::HashMap<Rank, CountAndCards> {
         let mut counts = std::collections::HashMap::new();
         for c in cards {
-            let entry = counts.entry(c.borrow().rank).or_insert(CountAndCards::new(c.clone()));
-            entry.add_card(c.clone());
-            entry.count += 1;
+            let entry = counts.entry(c.borrow().rank).and_modify(|e:&mut CountAndCards| {
+                e.add_card(c.clone());
+                e.count += 1;
+            }).or_insert(CountAndCards::new(c.clone()));
         }
         counts
     }
@@ -174,9 +175,10 @@ impl Planets {
     fn suit_counts(cards: &[SharedCard]) -> std::collections::HashMap<Suit, CountAndCards> {
         let mut counts = std::collections::HashMap::new();
         for c in cards {
-            let entry = counts.entry(c.borrow().suit).or_insert(CountAndCards::new(c.clone()));
-            entry.add_card(c.clone());
-            entry.count += 1;
+            let entry = counts.entry(c.borrow().suit).and_modify(|e:&mut CountAndCards| {
+                e.add_card(c.clone());
+                e.count += 1;
+            }).or_insert(CountAndCards::new(c.clone()));
         }
         counts
     }
@@ -278,7 +280,7 @@ impl Planets {
     }
     fn find_high_card(sorted_cards: &[SharedCard]) -> Vec<SharedCard> {
         // Highest rank card should be used for High Card scoring
-        vec![sorted_cards.last().cloned().unwrap()]
+        vec![sorted_cards.last().unwrap().clone()]
     }
 
     //TODO: This is not correct, does not treat Ace as low and high

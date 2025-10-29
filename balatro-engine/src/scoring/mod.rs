@@ -79,7 +79,9 @@ fn apply_pre_scoring(game_state: &mut GameState) -> GameResult<()> {
 /// Evaluate each card in the selected hand
 fn apply_played_hand_scoring(game_state: &mut GameState) -> GameResult<HandScore> {
     let selected_cards = game_state.hand.borrow().selected_cards();
+    println!("selected_cards: {:?}", selected_cards);
     let (poker_hand,scoring_cards )= game_state.planets.detect_poker_hand(&selected_cards).ok_or(GameError::InvalidGameState("No poker hand detected".to_string()))?;
+    println!("scoring_cards: {:?}", scoring_cards);
     let mut hand_score = game_state.planets.get_planet(poker_hand).ok_or(GameError::InvalidGameState("No planet found for poker hand".to_string()))?.get_base_score();
 
     for card in scoring_cards{
