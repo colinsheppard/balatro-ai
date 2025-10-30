@@ -67,25 +67,31 @@ fn process_shop_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Bo
 /// Process BlindSelect action
 fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
     let game_state = engine.game_state_mut();
-    
-    if let Some(next_blind) = game_state.upcoming_blinds.get_next_upcoming_blind() {
+    // Limit the immutable borrow of `upcoming_blinds` to this block
+    let next_blind_opt = {
+        game_state.upcoming_blinds.borrow().get_next_upcoming_blind()
+    };
+
+    if let Some(next_blind) = next_blind_opt {
         match choice {
             1 => {
                 // Play the blind
-                println!("Playing {}...", next_blind.name);
-                if let Some(blind_mut) = game_state.upcoming_blinds.get_next_upcoming_blind_mut() {
-                    blind_mut.status = BlindStatus::Active;
-                }
+                println!("Playing {}...", next_blind.borrow().name);
+                next_blind.borrow_mut().set_status(BlindStatus::Active);
                 game_state.phase = GamePhase::Playing;
                 game_state.deck.borrow_mut().shuffle();
-                game_state.clear_and_draw_hand().unwrap();
+                game_state.clear_and_draw_hand();
             }
             2 => {
                 // Skip the blind (only available for Small/Big blinds)
-                if next_blind.can_skip() {
-                    println!("Skipping {}...", next_blind.name);
-                    if let Some(blind_mut) = game_state.upcoming_blinds.get_next_upcoming_blind_mut() {
-                        blind_mut.status = BlindStatus::Skipped;
+                if next_blind.borrow().can_skip() {
+                    println!("Skipping {}...", next_blind.borrow().name);
+                    // Scope this borrow too so it drops before further mutations
+                    let blind_mut_opt = {
+                        game_state.upcoming_blinds.borrow().get_next_upcoming_blind()
+                    };
+                    if let Some(blind_mut) = blind_mut_opt {
+                        blind_mut.borrow_mut().status = BlindStatus::Skipped;
                     }
                     // TODO: Deduct skip cost from money
                     println!("Blind skipped! Moving to next blind or ante completion.");
@@ -120,7 +126,7 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
             println!("Playing selected cards...");
             let game_state = engine.game_state_mut();
             let _score = game_state.play_hand().unwrap_or(0);
-            if _score >= game_state.get_current_blind().unwrap().required_score { 
+            if _score >= game_state.get_current_blind().unwrap().borrow().required_score { 
                 game_state.phase = GamePhase::RoundEnd;
             } else {
                 game_state.draw_hand().unwrap();

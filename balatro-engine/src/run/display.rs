@@ -22,17 +22,17 @@ pub fn display_game_state(game_state: &GameState) {
     // Display blind statuses
     println!("Blinds Status:");
     println!("  Small: {:?} (Score: {}, Money: {})", 
-             game_state.upcoming_blinds.small.status,
-             game_state.upcoming_blinds.small.required_score,
-             game_state.upcoming_blinds.small.reward_money);
+             game_state.upcoming_blinds.borrow().small.borrow().status,
+             game_state.upcoming_blinds.borrow().small.borrow().required_score,
+             game_state.upcoming_blinds.borrow().small.borrow().reward_money);
     println!("  Big: {:?} (Score: {}, Money: {})", 
-             game_state.upcoming_blinds.big.status,
-             game_state.upcoming_blinds.big.required_score,
-             game_state.upcoming_blinds.big.reward_money);
+             game_state.upcoming_blinds.borrow().big.borrow().status,
+             game_state.upcoming_blinds.borrow().big.borrow().required_score,
+             game_state.upcoming_blinds.borrow().big.borrow().reward_money);
     println!("  Boss: {:?} (Score: {}, Money: {})", 
-             game_state.upcoming_blinds.boss.status,
-             game_state.upcoming_blinds.boss.required_score,
-             game_state.upcoming_blinds.boss.reward_money);
+             game_state.upcoming_blinds.borrow().boss.borrow().status,
+             game_state.upcoming_blinds.borrow().boss.borrow().required_score,
+             game_state.upcoming_blinds.borrow().boss.borrow().reward_money);
     
     println!("========================");
 }
@@ -51,13 +51,13 @@ pub fn display_blind_select_phase_state(game_state: &GameState) {
     println!("\n--- BLIND SELECT PHASE ---");
     println!("Ante {}", game_state.ante);
     
-    if let Some(next_blind) = game_state.upcoming_blinds.get_next_upcoming_blind() {
-        println!("Next Blind: {}", next_blind.name);
-        println!("Required Score: {}", next_blind.required_score);
-        println!("Reward Money: ${}", next_blind.reward_money);
-        println!("Type: {:?}", next_blind.blind_type);
+    if let Some(next_blind) = game_state.upcoming_blinds.borrow().get_next_upcoming_blind() {
+        println!("Next Blind: {}", next_blind.borrow().name);
+        println!("Required Score: {}", next_blind.borrow().required_score);
+        println!("Reward Money: ${}", next_blind.borrow().reward_money);
+        println!("Type: {:?}", next_blind.borrow().blind_type);
         
-        if let Some(boss_effect) = &next_blind.boss_effect {
+        if let Some(boss_effect) = &next_blind.borrow().boss_effect {
             println!("Boss Effect: {:?}", boss_effect);
         }
     } else {
@@ -68,9 +68,9 @@ pub fn display_blind_select_phase_state(game_state: &GameState) {
 /// Display Playing phase specific state
 pub fn display_playing_phase_state(game_state: &GameState) {
 
-    if let Some(active_blind) = game_state.upcoming_blinds.get_active_blind() {
-        println!("\n--- PLAYING {} ---", active_blind.name);
-        println!("Score: ({} / {})", game_state.score, active_blind.required_score);
+    if let Some(active_blind) = game_state.upcoming_blinds.borrow().get_active_blind() {
+        println!("\n--- PLAYING {} ---", active_blind.borrow().name);
+        println!("Score: ({} / {})", game_state.score, active_blind.borrow().required_score);
     } else {
         // Fallback if no active blind is found
         println!("\n--- PLAYING PHASE ---");
@@ -135,11 +135,11 @@ pub fn display_shop_actions() {
 pub fn display_blind_select_actions(game_state: &GameState) {
     println!("\nAvailable Actions:");
     
-    if let Some(next_blind) = game_state.upcoming_blinds.get_next_upcoming_blind() {
-        println!("1. Play {} ", next_blind.name);
+    if let Some(next_blind) = game_state.upcoming_blinds.borrow().get_next_upcoming_blind() {
+        println!("1. Play {} ", next_blind.borrow().name);
         
-        if next_blind.can_skip() {
-            println!("2. Skip {}", next_blind.name);
+        if next_blind.borrow().can_skip() {
+            println!("2. Skip {}", next_blind.borrow().name);
         }
     } else {
         println!("All blinds completed for this ante!");

@@ -1,12 +1,12 @@
 //! Main game state and logic for Balatro game engine
 
 use serde::{Deserialize, Serialize};
-use crate::{Consumables, Jokers, SharedHand, SharedRngManager};
+use crate::{Consumables, Jokers, SharedBlind, SharedHand, SharedRngManager};
 use crate::hand::Hand;
 use crate::deck::{Deck, DeckType, SharedDeck};
 use crate::planet::Planets;
 use crate::stakes::{Stake, StakeLevel};
-use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor};
+use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor, SharedUpcomingBlinds};
 use crate::error::{GameError, GameResult};
 use crate::card::SharedCard;
 
@@ -35,7 +35,7 @@ pub struct GameState {
     pub stake: Stake,
     pub jokers: Jokers,
     pub hand: SharedHand,
-    pub upcoming_blinds: UpcomingBlinds,
+    pub upcoming_blinds: SharedUpcomingBlinds,
     pub consumables: Consumables,
     pub round_number: u32,
     pub planets: Planets,
@@ -71,7 +71,7 @@ impl GameState {
             stake,
             jokers: Jokers::new(),
             hand: Hand::new(),
-            upcoming_blinds,
+            upcoming_blinds: upcoming_blinds,
             consumables: Consumables::new(),
             round_number: 1,
             planets: Planets::new_default().unwrap_or_default(),
@@ -162,22 +162,13 @@ impl GameState {
     }
 
     /// Get the current blind being faced (if any)
-    pub fn get_current_blind(&self) -> Option<&Blind> {
-        // For now, we'll need to track which blind is currently active
-        // This could be enhanced with a current_blind_type field in GameState
-        Some(&self.upcoming_blinds.small) // Default to small for now
+    pub fn get_current_blind(&self) -> Option<SharedBlind> {
+        self.upcoming_blinds.borrow().get_active_blind().clone()
     }
 
     /// Get a specific blind from upcoming blinds
-    pub fn get_blind(&self, blind_type: BlindType) -> Option<&Blind> {
-        self.upcoming_blinds.get_blind(blind_type)
-    }
-
-    /// Check if the player has beaten a specific blind
-    pub fn has_beaten_blind(&self, _blind_type: BlindType) -> bool {
-        // This would need to be tracked in GameState - for now return false
-        // Could add a beaten_blinds field to track this
-        false
+    pub fn get_blind(&self, blind_type: BlindType) -> Option<SharedBlind> {
+        self.upcoming_blinds.borrow().get_blind(blind_type).clone()
     }
 
     /// Generate new blinds for the current ante
