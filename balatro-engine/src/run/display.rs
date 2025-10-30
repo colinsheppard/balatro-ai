@@ -67,6 +67,7 @@ pub fn display_blind_select_phase_state(game_state: &GameState) {
 
 /// Display Playing phase specific state
 pub fn display_playing_phase_state(game_state: &GameState) {
+
     if let Some(active_blind) = game_state.upcoming_blinds.get_active_blind() {
         println!("\n--- PLAYING {} ---", active_blind.name);
         println!("Score: ({} / {})", game_state.score, active_blind.required_score);
@@ -74,12 +75,12 @@ pub fn display_playing_phase_state(game_state: &GameState) {
         // Fallback if no active blind is found
         println!("\n--- PLAYING PHASE ---");
     }
-    
+    println!("Deck: ({} / {})", game_state.deck.borrow().n_remaining_cards(), game_state.deck.borrow().n_cards_full_deck());
     
     // Display hand in horizontal layout with selection info
-    let binding = game_state.hand.borrow();
-    let selected_indices: std::collections::HashSet<usize> = binding.selected_indices().iter().copied().collect();
-    let cards = binding.cards();
+    let hand_borrowed = game_state.hand.borrow();
+    let selected_indices: std::collections::HashSet<usize> = hand_borrowed.selected_indices().iter().copied().collect();
+    let cards = hand_borrowed.cards();
     
     // Collect cards by selection status, maintaining position
     let mut selected_line =   String::from("selected:   ");
@@ -98,7 +99,7 @@ pub fn display_playing_phase_state(game_state: &GameState) {
         indices_line.push_str(&format!("{:<2} ", i + 2));
     }
     
-    println!("\nHand:");
+    println!("\nHand");
     println!("{}", selected_line);
     println!("{}", unselected_line);
     println!("{}", indices_line);

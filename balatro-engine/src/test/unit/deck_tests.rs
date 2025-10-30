@@ -8,7 +8,7 @@ use crate::test::fixtures::test_helpers::create_test_rng;
 fn test_deck_creation() {
     let rng = create_test_rng();
     let deck = Deck::new(DeckType::Red, rng);
-    assert_eq!(deck.borrow().remaining_cards(), 52);
+    assert_eq!(deck.borrow().n_remaining_cards(), 52);
     assert!(!deck.borrow().is_empty());
     assert_eq!(deck.borrow().discard_pile.len(), 0);
 }
@@ -21,12 +21,12 @@ fn test_deck_drawing() {
     // Draw one card
     let card = deck.borrow_mut().draw().unwrap();
     assert!(card.is_some());
-    assert_eq!(deck.borrow().remaining_cards(), 51);
+    assert_eq!(deck.borrow().n_remaining_cards(), 51);
     
     // Draw multiple cards
     let cards = deck.borrow_mut().draw_multiple(5).unwrap();
     assert_eq!(cards.len(), 5);
-    assert_eq!(deck.borrow().remaining_cards(), 46);
+    assert_eq!(deck.borrow().n_remaining_cards(), 46);
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn test_deck_drawing_empty() {
     }
     
     assert!(deck.borrow().is_empty());
-    assert_eq!(deck.borrow().remaining_cards(), 0);
+    assert_eq!(deck.borrow().n_remaining_cards(), 0);
     
     // Try to draw from empty deck
     let card = deck.borrow_mut().draw().unwrap();
@@ -108,7 +108,7 @@ fn test_deck_type_variants() {
     for deck_type in deck_types {
         let deck = Deck::new(deck_type.clone(), rng.clone());
         assert_eq!(deck.borrow().deck_type, deck_type);
-        assert_eq!(deck.borrow().remaining_cards(), 52);
+        assert_eq!(deck.borrow().n_remaining_cards(), 52);
     }
 }
 
@@ -129,7 +129,7 @@ fn test_standard_deck_composition() {
         }
         
         // Rank values are 2-14, array indices should be 0-12
-        rank_counts[(card.borrow().rank as usize - 2)] += 1;
+        rank_counts[card.borrow().rank as usize - 2] += 1;
     }
     
     // Check we have 13 cards of each suit

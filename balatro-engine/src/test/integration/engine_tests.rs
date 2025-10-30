@@ -115,7 +115,7 @@ fn test_deck_interaction_with_game_state() {
     // Draw hand
     game_state.clear_and_draw_hand().unwrap();
     assert_eq!(game_state.hand.borrow().len(), 8);
-    assert_eq!(game_state.deck.borrow().remaining_cards(), 44);
+    assert_eq!(game_state.deck.borrow().n_remaining_cards(), 44);
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn test_engine_state_persistence() {
 #[test]
 fn test_integration_with_main_rs_via_env() {
     // Set BALATRO_INPUT_FILE programmatically - main.rs will read this
-    env::set_var("BALATRO_INPUT_FILE", "input/play_one_hand.txt");
+    env::set_var("BALATRO_INPUT_FILE", "input/play_one_pair.txt");
     
     // Use InputSource's read_all_commands helper method
     let input_file = env::var("BALATRO_INPUT_FILE").unwrap();

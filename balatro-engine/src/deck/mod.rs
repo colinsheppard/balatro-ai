@@ -60,6 +60,7 @@ pub type SharedDeck = Rc<RefCell<Deck>>;
 #[derive(Debug, Clone)]
 pub struct Deck {
     pub deck_type: DeckType,
+    pub full_deck: Vec<SharedCard>,
     pub cards: VecDeque<SharedCard>,
     pub discard_pile: Vec<SharedCard>,
     // Skip serde serialization for the RNG manager
@@ -71,6 +72,7 @@ impl Deck {
     /// Create a new standard deck, wrapped in Rc<RefCell<>>
     pub fn new(_deck_type: DeckType, rng_manager: Rc<RefCell<GameRngManager>>) -> Rc<RefCell<Self>> {
         let mut cards = VecDeque::new();
+        let mut full_deck= Vec::new();
         
         // Create standard 52-card deck
         for suit in [Suit::Hearts, Suit::Diamonds, Suit::Clubs, Suit::Spades] {
@@ -79,12 +81,15 @@ impl Deck {
                 Rank::Six, Rank::Seven, Rank::Eight, Rank::Nine, Rank::Ten,
                 Rank::Jack, Rank::Queen, Rank::King,
             ] {
-                cards.push_back(Rc::new(RefCell::new(Card::new(suit, rank))));
+                let c = Rc::new(RefCell::new(Card::new(suit, rank)));
+                full_deck.push(c.clone());
+                cards.push_back(c.clone());
             }
         }
         
         let deck = Self {
             deck_type: _deck_type,
+            full_deck,
             cards,
             discard_pile: Vec::new(),
             rng_manager,
@@ -118,14 +123,21 @@ impl Deck {
 
     /// Shuffle the deck
     pub fn shuffle(&mut self) {
-        let mut cards_vec: Vec<_> = self.cards.drain(..).collect();
+        self.cards.clear();
+        self.discard_pile.clear();
+        let mut cards_vec: Vec<_> = self.full_deck.clone().into_iter().collect();
         cards_vec.shuffle(self.rng_manager.borrow_mut().get_rng("DECK_SHUFFLE"));
         self.cards = cards_vec.into();
     }
 
     /// Get the number of cards remaining in the deck
-    pub fn remaining_cards(&self) -> usize {
+    pub fn n_remaining_cards(&self) -> usize {
         self.cards.len()
+    }
+
+    /// Get the number of cards in the full deck
+    pub fn n_cards_full_deck(&self) -> usize {
+        self.full_deck.len()
     }
 
     /// Check if the deck is empty

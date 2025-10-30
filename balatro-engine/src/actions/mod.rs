@@ -210,10 +210,10 @@ impl fmt::Display for PlayingAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             PlayingAction::PlaySelectedCards => {
-                write!(f, "0: Play selected cards")
+                write!(f, "Play selected cards")
             }
             PlayingAction::DiscardSelectedCards => {
-                write!(f, "1: Discard selected cards")
+                write!(f, "Discard selected cards")
             }
             PlayingAction::SortByRank => {
                 write!(f, "Sort by rank")
