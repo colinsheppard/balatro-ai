@@ -185,11 +185,12 @@ pub fn display_playing_actions(game_state: &crate::GameState, actions: &[(u32, c
 }
 
 /// Display available RoundEnd actions
-pub fn display_round_end_actions() {
+pub fn display_round_end_actions(actions: &[(u32, crate::actions::RoundEndAction)]) {
     println!("\nAvailable Actions:");
-    println!("1. Continue to Shop");
-    println!("2. View Statistics");
-    println!("3. Save Game");
+    
+    for (action_num, action) in actions {
+        println!("{}: {}", action_num, action);
+    }
 }
 
 /// Display available GameOver actions

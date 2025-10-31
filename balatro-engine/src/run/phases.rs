@@ -35,9 +35,10 @@ pub fn handle_playing_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn st
 /// Handle the RoundEnd phase
 pub fn handle_round_end_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
     display_round_end_phase_state(engine.game_state());
-    display_round_end_actions();
+    let round_end_actions = crate::actions::helpers::create_round_end_actions();
+    display_round_end_actions(&round_end_actions);
     let choice = get_user_input()?;
-    process_round_end_action(engine, choice)?;
+    process_round_end_action(engine, &round_end_actions, choice)?;
     Ok(())
 }
 
@@ -173,18 +174,18 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
     }
 }
 
-/// Process RoundEnd action (stub)
-fn process_round_end_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
-    println!("RoundEnd action {} selected (stub)", choice);
-    // TODO: Implement actual round end actions
-    match choice {
-        1 => {
-            println!("Continuing to shop...");
+/// Process RoundEnd action
+fn process_round_end_action(engine: &mut BalatroEngine, round_end_actions: &[(u32, crate::actions::RoundEndAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+    let (_action_num, action) = round_end_actions.get(choice as usize)
+        .ok_or_else(|| format!("Invalid choice: {}", choice))?;
+    
+    match action {
+        crate::actions::RoundEndAction::CashOut => {
+            println!("Cashing out...");
             engine.game_state_mut().phase = GamePhase::Shop;
+            Ok(())
         }
-        _ => println!("Invalid round end choice: {}", choice),
     }
-    Ok(())
 }
 
 /// Process GameOver action (stub)

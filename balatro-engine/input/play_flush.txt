@@ -1,0 +1,21 @@
+# Quick Start Test - Start game and play first blind
+24
+1
+2
+4
+5
+6
+8
+9
+1
+4
+5
+7
+9
+1
+2
+3
+5
+6
+9
+0

@@ -233,32 +233,26 @@ impl fmt::Display for PlayingAction {
 /// Actions available in the RoundEnd phase
 #[derive(Debug, Clone)]
 pub enum RoundEndAction {
-    ContinueToShop,
-    ViewStatistics,
-    SaveGame,
+    CashOut,
 }
 
 impl Action for RoundEndAction {
     fn index(&self) -> u32 {
         match self {
-            RoundEndAction::ContinueToShop => 1,
-            RoundEndAction::ViewStatistics => 2,
-            RoundEndAction::SaveGame => 3,
+            RoundEndAction::CashOut => 1,
         }
     }
     
     fn description(&self) -> &str {
         match self {
-            RoundEndAction::ContinueToShop => "Continue to Shop",
-            RoundEndAction::ViewStatistics => "View Statistics",
-            RoundEndAction::SaveGame => "Save Game",
+            RoundEndAction::CashOut => "Cash Out",
         }
     }
 }
 
 impl fmt::Display for RoundEndAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.index(), self.description())
+        write!(f, "{}", self.description())
     }
 }
 
@@ -461,11 +455,9 @@ pub mod helpers {
     }
     
     /// Create all round end actions
-    pub fn create_round_end_actions() -> Vec<RoundEndAction> {
+    pub fn create_round_end_actions() -> Vec<(u32, RoundEndAction)> {
         vec![
-            RoundEndAction::ContinueToShop,
-            RoundEndAction::ViewStatistics,
-            RoundEndAction::SaveGame,
+            (0, RoundEndAction::CashOut),
         ]
     }
     
