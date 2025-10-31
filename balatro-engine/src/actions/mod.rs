@@ -72,38 +72,26 @@ impl fmt::Display for MenuAction {
 /// Actions available in the Shop phase
 #[derive(Debug, Clone)]
 pub enum ShopAction {
-    BuyJoker,
-    BuyConsumable,
-    SellJoker,
-    SkipShop,
-    ViewDeck,
+    NextRound,
 }
 
 impl Action for ShopAction {
     fn index(&self) -> u32 {
         match self {
-            ShopAction::BuyJoker => 1,
-            ShopAction::BuyConsumable => 2,
-            ShopAction::SellJoker => 3,
-            ShopAction::SkipShop => 4,
-            ShopAction::ViewDeck => 5,
+            ShopAction::NextRound => 1,
         }
     }
     
     fn description(&self) -> &str {
         match self {
-            ShopAction::BuyJoker => "Buy Joker",
-            ShopAction::BuyConsumable => "Buy Consumable",
-            ShopAction::SellJoker => "Sell Joker",
-            ShopAction::SkipShop => "Skip Shop",
-            ShopAction::ViewDeck => "View Deck",
+            ShopAction::NextRound => "Next Round",
         }
     }
 }
 
 impl fmt::Display for ShopAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.index(), self.description())
+        write!(f, "{}", self.description())
     }
 }
 
@@ -357,13 +345,9 @@ pub mod helpers {
     }
     
     /// Create all shop actions
-    pub fn create_shop_actions() -> Vec<ShopAction> {
+    pub fn create_shop_actions() -> Vec<(u32, ShopAction)> {
         vec![
-            ShopAction::BuyJoker,
-            ShopAction::BuyConsumable,
-            ShopAction::SellJoker,
-            ShopAction::SkipShop,
-            ShopAction::ViewDeck,
+            (0, ShopAction::NextRound),
         ]
     }
     

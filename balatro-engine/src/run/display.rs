@@ -122,13 +122,12 @@ pub fn display_game_over_phase_state(game_state: &GameState) {
 }
 
 /// Display available Shop actions
-pub fn display_shop_actions() {
+pub fn display_shop_actions(actions: &[(u32, crate::actions::ShopAction)]) {
     println!("\nAvailable Actions:");
-    println!("1. Buy Joker");
-    println!("2. Buy Consumable");
-    println!("3. Sell Joker");
-    println!("4. Skip Shop");
-    println!("5. View Deck");
+    
+    for (action_num, action) in actions {
+        println!("{}: {}", action_num, action);
+    }
 }
 
 /// Display available BlindSelect actions

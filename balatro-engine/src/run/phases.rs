@@ -7,9 +7,10 @@ use crate::run::user_input::get_user_input;
 /// Handle the Shop phase
 pub fn handle_shop_phase(engine: &mut BalatroEngine) -> Result<(), Box<dyn std::error::Error>> {
     display_shop_phase_state(engine.game_state());
-    display_shop_actions();
+    let shop_actions = crate::actions::helpers::create_shop_actions();
+    display_shop_actions(&shop_actions);
     let choice = get_user_input()?;
-    process_shop_action(engine, choice)?;
+    process_shop_action(engine, &shop_actions, choice)?;
     Ok(())
 }
 
@@ -51,18 +52,18 @@ pub fn handle_game_over_phase(engine: &mut BalatroEngine) -> Result<bool, Box<dy
     Ok(should_restart)
 }
 
-/// Process Shop action (stub)
-fn process_shop_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Shop action {} selected (stub)", choice);
-    // TODO: Implement actual shop actions
-    match choice {
-        4 => {
-            println!("Skipping shop...");
+/// Process Shop action
+fn process_shop_action(engine: &mut BalatroEngine, shop_actions: &[(u32, crate::actions::ShopAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+    let (_action_num, action) = shop_actions.get(choice as usize)
+        .ok_or_else(|| format!("Invalid choice: {}", choice))?;
+    
+    match action {
+        crate::actions::ShopAction::NextRound => {
+            println!("Moving to next round...");
             engine.game_state_mut().phase = GamePhase::BlindSelect;
+            Ok(())
         }
-        _ => println!("Invalid shop choice: {}", choice),
     }
-    Ok(())
 }
 
 /// Process BlindSelect action
