@@ -372,12 +372,15 @@ pub mod helpers {
         let mut actions = Vec::new();
         let mut action_index = 0u32;
         
-        // First two actions are always the same
+        // First action is always play
         actions.push((action_index, PlayingAction::PlaySelectedCards));
         action_index += 1;
         
-        actions.push((action_index, PlayingAction::DiscardSelectedCards));
-        action_index += 1;
+        // Only add discard action if discards remain
+        if game_state.play_limits.borrow().has_discards_remaining() {
+            actions.push((action_index, PlayingAction::DiscardSelectedCards));
+            action_index += 1;
+        }
         
         // Generate actions for each card in order
         for (i, _card) in cards.iter().enumerate() {

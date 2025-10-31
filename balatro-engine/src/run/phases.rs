@@ -82,7 +82,9 @@ fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Resul
                 next_blind.borrow_mut().set_status(BlindStatus::Active);
                 game_state.phase = GamePhase::Playing;
                 game_state.deck.borrow_mut().shuffle();
-                game_state.clear_and_draw_hand();
+                game_state.clear_and_draw_hand()?;
+                // Reset play limits when entering playing phase
+                game_state.play_limits.borrow_mut().reset_remaining();
             }
             2 => {
                 // Skip the blind (only available for Small/Big blinds)
@@ -127,9 +129,25 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
         crate::actions::PlayingAction::PlaySelectedCards => {
             println!("Playing selected cards...");
             let game_state = engine.game_state_mut();
+            
+            // Check if hands remain
+            if !game_state.play_limits.borrow().has_hands_remaining() {
+                println!("No hands remaining! Game Over.");
+                game_state.phase = GamePhase::GameOver;
+                return Ok(());
+            }
+            
             let _score = game_state.play_hand().unwrap_or(0);
+            
+            // Decrement hands remaining after playing
+            game_state.play_limits.borrow_mut().decrement_hands();
+            
+            // Check if we've beaten the blind
             if _score >= game_state.get_current_blind().unwrap().borrow().required_score { 
                 game_state.phase = GamePhase::RoundEnd;
+            } else if !game_state.play_limits.borrow().has_hands_remaining() {
+                // No hands remaining, transition to game over after scoring
+                game_state.phase = GamePhase::GameOver;
             } else {
                 game_state.draw_hand().unwrap();
             }
@@ -138,8 +156,19 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
         crate::actions::PlayingAction::DiscardSelectedCards => {
             println!("Discarding selected cards...");
             let game_state = engine.game_state_mut();
+            
+            // Check if discards remain (shouldn't happen if action filtering works correctly)
+            if !game_state.play_limits.borrow().has_discards_remaining() {
+                println!("No discards remaining! This action should not be available.");
+                return Ok(());
+            }
+            
             game_state.hand.borrow_mut().discard_selected_cards(game_state.deck.clone()).unwrap();
             game_state.draw_hand().unwrap();
+            
+            // Decrement discards remaining after discarding
+            game_state.play_limits.borrow_mut().decrement_discards();
+            
             Ok(())
         }
         crate::actions::PlayingAction::SelectCard(card_idx) => {

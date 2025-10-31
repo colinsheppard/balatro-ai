@@ -1,7 +1,7 @@
 //! Main game state and logic for Balatro game engine
 
 use serde::{Deserialize, Serialize};
-use crate::{Consumables, Jokers, SharedBlind, SharedHand, SharedRngManager};
+use crate::{Consumables, Jokers, SharedBlind, SharedHand, SharedRngManager, SharedPlayLimits};
 use crate::hand::Hand;
 use crate::deck::{Deck, DeckType, SharedDeck};
 use crate::planet::Planets;
@@ -9,6 +9,7 @@ use crate::stakes::{Stake, StakeLevel};
 use crate::blind::{Blind, UpcomingBlinds, BlindType, BossEffect, BlindProcessor, SharedUpcomingBlinds};
 use crate::error::{GameError, GameResult};
 use crate::card::SharedCard;
+use crate::play_limits::PlayLimits;
 
 /// Current game phase
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,6 +40,7 @@ pub struct GameState {
     pub consumables: Consumables,
     pub round_number: u32,
     pub planets: Planets,
+    pub play_limits: SharedPlayLimits,
 }
 
 impl GameState {
@@ -75,6 +77,7 @@ impl GameState {
             consumables: Consumables::new(),
             round_number: 1,
             planets: Planets::new_default().unwrap_or_default(),
+            play_limits: PlayLimits::new(),
         }
     }
 
@@ -109,6 +112,7 @@ impl GameState {
             consumables: Consumables::new(),
             round_number: 1,
             planets: Planets::new_default().unwrap_or_default(),
+            play_limits: PlayLimits::new(),
         }
     }
 
@@ -142,7 +146,7 @@ impl GameState {
         self.score += final_score;
         
         // Remove played cards from hand
-        self.hand.borrow_mut().discard_selected_cards(self.deck.clone());
+        self.hand.borrow_mut().discard_selected_cards(self.deck.clone())?;
 
         Ok(final_score)
     }

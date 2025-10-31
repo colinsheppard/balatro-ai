@@ -76,6 +76,8 @@ pub fn display_playing_phase_state(game_state: &GameState) {
         println!("\n--- PLAYING PHASE ---");
     }
     println!("Deck: ({} / {})", game_state.deck.borrow().n_remaining_cards(), game_state.deck.borrow().n_cards_full_deck());
+    println!("Hands remaining: {}", game_state.play_limits.borrow().n_hands_remaining);
+    println!("Discards remaining: {}", game_state.play_limits.borrow().n_discards_remaining);
     
     // Display hand in horizontal layout with selection info
     let hand_borrowed = game_state.hand.borrow();

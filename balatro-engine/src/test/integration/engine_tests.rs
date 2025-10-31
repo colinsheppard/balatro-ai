@@ -160,7 +160,7 @@ fn test_engine_state_persistence() {
 #[test]
 fn test_integration_with_main_rs_via_env() {
     // Set BALATRO_INPUT_FILE programmatically - main.rs will read this
-    env::set_var("BALATRO_INPUT_FILE", "input/play_flush.txt");
+    env::set_var("BALATRO_INPUT_FILE", "input/play_one_pair.txt");
     
     // Use InputSource's read_all_commands helper method
     let input_file = env::var("BALATRO_INPUT_FILE").unwrap();
