@@ -24,6 +24,9 @@ pub mod planet;
 pub mod utilities;
 pub mod play_limits;
 
+#[cfg(feature = "python")]
+pub mod python;
+
 // Re-export commonly used types
 pub use card::*;
 pub use deck::*;

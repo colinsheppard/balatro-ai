@@ -7,6 +7,10 @@ description = "A Rust implementation of the Balatro card game engine"
 license = "MIT"
 repository = "https://github.com/balatro-ai/balatro-engine"
 
+[lib]
+name = "balatro_engine"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 # Serialization and data handling
 serde = { version = "1.0", features = ["derive"] }
@@ -32,9 +36,16 @@ env_logger = "0.10"
 # Date and time handling
 chrono = { version = "0.4", features = ["serde"] }
 
+# Python bindings (optional)
+pyo3 = { version = "0.21", features = ["auto-initialize", "extension-module"], optional = true }
+
 # Optional: For future GUI/display features
 # bevy = "0.12"  # Uncomment when ready for graphics
 # ratatui = "0.24"  # Uncomment for terminal UI
+
+[features]
+default = []
+python = ["pyo3"]
 
 [dev-dependencies]
 criterion = "0.5"
