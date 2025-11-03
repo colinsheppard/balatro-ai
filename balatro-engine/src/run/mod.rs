@@ -15,4 +15,5 @@ pub mod menu;
 pub mod run;
 pub mod display;
 pub mod phases;
+pub mod driver;
 

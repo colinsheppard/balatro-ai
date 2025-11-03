@@ -3,6 +3,8 @@
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufRead, BufReader, Write, Read};
+use std::sync::mpsc;
+use std::time::Duration;
 
 /// Input source for automated testing and user interaction
 pub enum InputSource {
@@ -14,6 +16,7 @@ pub enum InputSource {
     FileThenInteractiveRecording(BufReader<File>, File, bool), // File then interactive with recording
     Stdin(BufReader<io::Stdin>),
     StdinRecording(BufReader<io::Stdin>, File), // Stdin input with recording
+    Python(mpsc::Receiver<u32>), // Input from Python via channel
 }
 
 impl InputSource {
@@ -217,6 +220,36 @@ impl InputSource {
                 file.flush()?;
                 
                 Ok(line)
+            }
+            Self::Python(receiver) => {
+                // In debug mode, use non-blocking polling so IDE debuggers can interrupt cleanly
+                let debug_nonblock = std::env::var("BALATRO_DEBUG_NONBLOCK").is_ok();
+                if debug_nonblock {
+                    loop {
+                        match receiver.try_recv() {
+                            Ok(choice) => return Ok(choice.to_string()),
+                            Err(mpsc::TryRecvError::Empty) => {
+                                // Sleep briefly to avoid busy-waiting
+                                std::thread::sleep(Duration::from_millis(10));
+                                continue;
+                            }
+                            Err(mpsc::TryRecvError::Disconnected) => {
+                                return Err("Python input channel disconnected".into());
+                            }
+                        }
+                    }
+                } else {
+                    // Default behavior: block waiting for input, with a long timeout to allow signals
+                    match receiver.recv_timeout(Duration::from_secs(3600)) {
+                        Ok(choice) => Ok(choice.to_string()),
+                        Err(mpsc::RecvTimeoutError::Timeout) => {
+                            Err("Python input timeout - no input received within 1 hour".into())
+                        }
+                        Err(mpsc::RecvTimeoutError::Disconnected) => {
+                            Err("Python input channel disconnected".into())
+                        }
+                    }
+                }
             }
         }
     }

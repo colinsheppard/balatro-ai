@@ -7,7 +7,14 @@ use std::io::{self, Write};
 pub fn get_user_input() -> Result<u32, Box<dyn std::error::Error>> {
     unsafe {
         if let Some(ref mut source) = crate::run::initialize::INPUT_SOURCE {
+            // Handle Python input directly (no prompt, no parsing needed)
             match source {
+                InputSource::Python(_) => {
+                    let input = source.read_line()?;
+                    // Python input comes as a u32 converted to string, so parsing should always succeed
+                    return input.trim().parse::<u32>()
+                        .map_err(|e| format!("Failed to parse Python input: {}", e).into());
+                }
                 InputSource::Interactive | InputSource::InteractiveRecording(_) => {
                     print!("\nEnter your choice (number) or 'quit' to exit: ");
                     io::stdout().flush()?;

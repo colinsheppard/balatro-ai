@@ -7,6 +7,8 @@ use pyo3::prelude::*;
 #[cfg(feature = "python")]
 use pyo3::exceptions::PyValueError;
 #[cfg(feature = "python")]
+use pyo3::wrap_pyfunction;
+#[cfg(feature = "python")]
 use crate::actions::{Action, MenuAction, ShopAction, BlindAction, PlayingAction, RoundEndAction, GameOverAction};
 #[cfg(feature = "python")]
 use crate::deck::DeckType;
@@ -18,6 +20,21 @@ use crate::stakes::StakeLevel;
 use serde_json;
 
 // Supporting enum types exposed to Python
+// StepResult exposed to Python
+#[cfg(feature = "python")]
+#[pyclass(name = "StepResult")]
+#[derive(Clone)]
+pub struct PyStepResult {
+    #[pyo3(get)]
+    status: String,
+    #[pyo3(get)]
+    phase: Option<String>,
+    #[pyo3(get)]
+    actions: Vec<(u32, String)>,
+    #[pyo3(get)]
+    finished: Option<bool>,
+}
+
 
 #[cfg(feature = "python")]
 #[pyclass(name = "GamePhase")]
@@ -595,6 +612,127 @@ impl From<GameState> for PyGameState {
     }
 }
 
+// BalatroEngine wrapper
+
+#[cfg(feature = "python")]
+#[pyclass(name = "BalatroEngine")]
+pub struct PyBalatroEngine {
+    engine: crate::BalatroEngine,
+}
+
+// Not Send/Sync because BalatroEngine uses Rc<RefCell<>>
+#[cfg(feature = "python")]
+unsafe impl Send for PyBalatroEngine {}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl PyBalatroEngine {
+    #[new]
+    fn new(seed: u64) -> Self {
+        Self {
+            engine: crate::BalatroEngine::new(seed),
+        }
+    }
+
+    fn start_new_default_run(&mut self) -> PyResult<()> {
+        self.engine.start_new_default_run()
+            .map_err(|e| PyValueError::new_err(format!("Failed to start run: {:?}", e)))?;
+        Ok(())
+    }
+
+    fn start_new_run(&mut self, deck_type: &PyDeckType, stake_level: &PyStakeLevel) -> PyResult<()> {
+        self.engine.start_new_run(deck_type.deck_type.clone(), stake_level.stake_level.clone())
+            .map_err(|e| PyValueError::new_err(format!("Failed to start run: {:?}", e)))?;
+        Ok(())
+    }
+
+    fn start_new_run_with_selections(&mut self) -> PyResult<()> {
+        self.engine.start_new_run_with_selections()
+            .map_err(|e| PyValueError::new_err(format!("Failed to start run: {:?}", e)))?;
+        Ok(())
+    }
+
+    fn set_selected_deck(&mut self, deck_type: &PyDeckType) {
+        self.engine.set_selected_deck(deck_type.deck_type.clone());
+    }
+
+    fn set_selected_stake(&mut self, stake_level: &PyStakeLevel) {
+        self.engine.set_selected_stake(stake_level.stake_level.clone());
+    }
+
+    fn game_state(&self) -> PyResult<PyGameState> {
+        // Note: This creates a new PyGameState wrapper around a reference
+        // For now, we'll need to work with the game_state through the engine
+        // TODO: Consider making GameState Clone or using a different approach
+        Err(PyValueError::new_err("game_state() method not yet implemented - GameState does not implement Clone"))
+    }
+
+    /// Non-blocking step API for Python-driven control
+    fn step(&mut self, choice: Option<u32>) -> PyResult<PyStepResult> {
+        use crate::run::driver::{step, ProvidedInput, StepResult};
+        let provided = match choice { Some(c) => ProvidedInput::Choice(c), None => ProvidedInput::None };
+        match step(&mut self.engine, provided)
+            .map_err(|e| PyValueError::new_err(format!("step() failed: {}", e)))? {
+            StepResult::Progressed => Ok(PyStepResult { status: "Progressed".to_string(), phase: None, actions: vec![], finished: None }),
+            StepResult::NeedsInput(ctx) => Ok(PyStepResult {
+                status: "NeedsInput".to_string(),
+                phase: Some(match ctx.phase { crate::game::GamePhase::Shop => "Shop", crate::game::GamePhase::ShopPackSelection => "ShopPackSelection", crate::game::GamePhase::BlindSelect => "BlindSelect", crate::game::GamePhase::Playing => "Playing", crate::game::GamePhase::RoundEnd => "RoundEnd", crate::game::GamePhase::GameOver => "GameOver" }.to_string()),
+                actions: ctx.actions,
+                finished: None,
+            }),
+            StepResult::Finished { should_restart } => Ok(PyStepResult { status: "Finished".to_string(), phase: None, actions: vec![], finished: Some(should_restart) }),
+        }
+    }
+}
+
+// Python input functions
+
+#[cfg(feature = "python")]
+/// Enable Python input mode for the game loop
+/// This must be called before starting the game loop to receive input from Python
+#[pyfunction]
+fn enable_python_input() -> PyResult<()> {
+    use crate::run::initialize::initialize_python_input;
+    // Initialize Python input mode - the sender is stored globally
+    initialize_python_input();
+    Ok(())
+}
+
+#[cfg(feature = "python")]
+/// Provide user input from Python to the game loop
+/// Call this function with a choice (u32) when the game is waiting for input
+#[pyfunction]
+fn provide_input(choice: u32) -> PyResult<()> {
+    use crate::run::initialize::get_python_input_sender;
+    
+    let sender = get_python_input_sender()
+        .ok_or_else(|| PyValueError::new_err("Python input mode not enabled. Call enable_python_input() first."))?;
+    
+    sender.send(choice)
+        .map_err(|e| PyValueError::new_err(format!("Failed to send input: {}", e)))?;
+    
+    Ok(())
+}
+
+#[cfg(feature = "python")]
+/// Handle the initial menu phase
+#[pyfunction]
+fn handle_initial_menu(engine: &mut PyBalatroEngine) -> PyResult<()> {
+    use crate::run::menu::handle_initial_menu;
+    handle_initial_menu(&mut engine.engine)
+        .map_err(|e| PyValueError::new_err(format!("Failed to handle menu: {}", e)))?;
+    Ok(())
+}
+
+#[cfg(feature = "python")]
+/// Run the main game loop
+#[pyfunction]
+fn run_game_loop(engine: &mut PyBalatroEngine) -> PyResult<bool> {
+    use crate::run::run::run_game_loop;
+    run_game_loop(&mut engine.engine)
+        .map_err(|e| PyValueError::new_err(format!("Failed to run game loop: {}", e)))
+}
+
 // Module initialization
 
 #[cfg(feature = "python")]
@@ -615,6 +753,20 @@ fn balatro_engine(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Register GameState
     m.add_class::<PyGameState>()?;
+
+    // Register BalatroEngine
+    m.add_class::<PyBalatroEngine>()?;
+
+    // Register StepResult class
+    m.add_class::<PyStepResult>()?;
+
+    // Register input functions
+    m.add_function(wrap_pyfunction!(enable_python_input, m)?)?;
+    m.add_function(wrap_pyfunction!(provide_input, m)?)?;
+    
+    // Register game loop functions
+    m.add_function(wrap_pyfunction!(handle_initial_menu, m)?)?;
+    m.add_function(wrap_pyfunction!(run_game_loop, m)?)?;
 
     Ok(())
 }

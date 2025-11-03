@@ -53,7 +53,7 @@ pub fn handle_game_over_phase(engine: &mut BalatroEngine) -> Result<bool, Box<dy
 }
 
 /// Process Shop action
-fn process_shop_action(engine: &mut BalatroEngine, shop_actions: &[(u32, crate::actions::ShopAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn process_shop_action(engine: &mut BalatroEngine, shop_actions: &[(u32, crate::actions::ShopAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
     let (_action_num, action) = shop_actions.get(choice as usize)
         .ok_or_else(|| format!("Invalid choice: {}", choice))?;
     
@@ -67,7 +67,7 @@ fn process_shop_action(engine: &mut BalatroEngine, shop_actions: &[(u32, crate::
 }
 
 /// Process BlindSelect action
-fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Result<(), Box<dyn std::error::Error>> {
     let game_state = engine.game_state_mut();
     // Limit the immutable borrow of `upcoming_blinds` to this block
     let next_blind_opt = {
@@ -121,7 +121,7 @@ fn process_blind_select_action(engine: &mut BalatroEngine, choice: u32) -> Resul
 }
 
 /// Process Playing action (stub)
-fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, crate::actions::PlayingAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, crate::actions::PlayingAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
     let (_action_num, action) = playing_actions.get(choice as usize)
         .ok_or_else(|| format!("Invalid choice: {}", choice))?;
     
@@ -205,7 +205,7 @@ fn process_playing_action(engine: &mut BalatroEngine, playing_actions: &[(u32, c
 }
 
 /// Process RoundEnd action
-fn process_round_end_action(engine: &mut BalatroEngine, round_end_actions: &[(u32, crate::actions::RoundEndAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn process_round_end_action(engine: &mut BalatroEngine, round_end_actions: &[(u32, crate::actions::RoundEndAction)], choice: u32) -> Result<(), Box<dyn std::error::Error>> {
     let (_action_num, action) = round_end_actions.get(choice as usize)
         .ok_or_else(|| format!("Invalid choice: {}", choice))?;
     
@@ -219,7 +219,7 @@ fn process_round_end_action(engine: &mut BalatroEngine, round_end_actions: &[(u3
 }
 
 /// Process GameOver action (stub)
-fn process_game_over_action(_engine: &mut BalatroEngine, choice: u32) -> Result<bool, Box<dyn std::error::Error>> {
+pub(crate) fn process_game_over_action(_engine: &mut BalatroEngine, choice: u32) -> Result<bool, Box<dyn std::error::Error>> {
     println!("GameOver action {} selected (stub)", choice);
     // TODO: Implement actual game over actions
     match choice {
