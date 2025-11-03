@@ -1,1 +1,13 @@
-target
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Python extension modules (these are build artifacts)
+*.so
+*.dylib
+balatro_engine.so
+
+# But keep the source-controlled ones if any
+!**/lib*.so
+!**/lib*.dylib

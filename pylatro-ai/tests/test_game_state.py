@@ -82,7 +82,7 @@ def test_supporting_types_can_be_created(balatro_engine):
     
     # Test StakeLevel
     stake_level = balatro_engine.StakeLevel("White")
-    assert str(stake_level) == "White"
+    assert str(stake_level) == "White Stake"
 
 
 def test_supporting_types_validation(balatro_engine):

@@ -38,6 +38,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Python bindings (optional)
 pyo3 = { version = "0.21", features = ["auto-initialize", "extension-module"], optional = true }
+pyo3-build-config = { version = "0.21", optional = true }
 
 # Optional: For future GUI/display features
 # bevy = "0.12"  # Uncomment when ready for graphics
@@ -45,7 +46,10 @@ pyo3 = { version = "0.21", features = ["auto-initialize", "extension-module"], o
 
 [features]
 default = []
-python = ["pyo3"]
+python = ["pyo3", "pyo3-build-config"]
+
+[build-dependencies]
+pyo3-build-config = { version = "0.21", optional = true }
 
 [dev-dependencies]
 criterion = "0.5"

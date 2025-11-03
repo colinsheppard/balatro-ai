@@ -6,9 +6,11 @@ Python bindings and test suite for the `balatro-engine` Rust library.
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.8 or higher with development headers
 - Rust toolchain (for building the engine)
 - The `balatro-engine` crate must be built with the `python` feature enabled
+
+**Note for macOS users**: If you're using pyenv or a custom Python installation, ensure Python development headers are available. The build system will automatically detect and link against the Python installation found by `pyo3-build-config`.
 
 ### Building the Rust Extension
 
@@ -27,9 +29,11 @@ cargo build --features python --release
 ```
 
 The built extension module will be located at:
-- Linux: `balatro-engine/target/release/libbalatro_engine.so`
-- macOS: `balatro-engine/target/release/libbalatro_engine.dylib`
+- Linux: `balatro-engine/target/release/libbalatro_engine.so` (import as `balatro_engine.so`)
+- macOS: `balatro-engine/target/release/libbalatro_engine.dylib` (symlinked as `balatro_engine.so` for Python import)
 - Windows: `balatro-engine/target/release/balatro_engine.dll`
+
+**Note**: The setup script automatically creates a `balatro_engine.so` symlink on macOS for Python compatibility.
 
 ### Installing Python Dependencies
 

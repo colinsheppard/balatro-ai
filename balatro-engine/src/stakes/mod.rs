@@ -171,14 +171,14 @@ impl StakeManager {
             // White Stake - Base difficulty
             Stake::new_verbose(
                 StakeLevel::White,
-                "White Stake".to_string(),
+                "White".to_string(),
                 "Base difficulty with no modifiers".to_string(),
             ),
             
             // Red Stake - Slightly harder blinds
             Stake::with_modifiers(
                 StakeLevel::Red,
-                "Red Stake".to_string(),
+                "Red".to_string(),
                 "Blind scores increased by 10%".to_string(),
                 StakeModifiers {
                     blind_score_multiplier: 1.1,
@@ -189,7 +189,7 @@ impl StakeManager {
             // Green Stake - More expensive skips
             Stake::with_modifiers(
                 StakeLevel::Green,
-                "Green Stake".to_string(),
+                "Green".to_string(),
                 "Skip costs increased by $2".to_string(),
                 StakeModifiers {
                     skip_cost_bonus: 2,
@@ -200,7 +200,7 @@ impl StakeManager {
             // Blue Stake - Harder blinds and more expensive skips
             Stake::with_modifiers(
                 StakeLevel::Blue,
-                "Blue Stake".to_string(),
+                "Blue".to_string(),
                 "Blind scores +20%, skip costs +$3".to_string(),
                 StakeModifiers {
                     blind_score_multiplier: 1.2,
@@ -212,7 +212,7 @@ impl StakeManager {
             // Black Stake - Reduced money rewards
             Stake::with_modifiers(
                 StakeLevel::Black,
-                "Black Stake".to_string(),
+                "Black".to_string(),
                 "Money rewards reduced by 25%".to_string(),
                 StakeModifiers {
                     money_reward_multiplier: 0.75,
@@ -223,7 +223,7 @@ impl StakeManager {
             // Purple Stake - More expensive jokers
             Stake::with_modifiers(
                 StakeLevel::Purple,
-                "Purple Stake".to_string(),
+                "Purple".to_string(),
                 "Joker costs increased by 50%".to_string(),
                 StakeModifiers {
                     joker_cost_multiplier: 1.5,
@@ -234,7 +234,7 @@ impl StakeManager {
             // Orange Stake - Fewer hands per round
             Stake::with_modifiers(
                 StakeLevel::Orange,
-                "Orange Stake".to_string(),
+                "Orange".to_string(),
                 "One less hand per round".to_string(),
                 StakeModifiers {
                     hands_per_round_bonus: -1,
@@ -245,7 +245,7 @@ impl StakeManager {
             // Gold Stake - Ultimate challenge
             Stake::with_modifiers(
                 StakeLevel::Gold,
-                "Gold Stake".to_string(),
+                "Gold".to_string(),
                 "All previous modifiers combined".to_string(),
                 StakeModifiers {
                     blind_score_multiplier: 1.3,
@@ -326,7 +326,7 @@ mod tests {
         let stake = Stake::new(StakeLevel::Red);
         
         assert_eq!(stake.level, StakeLevel::Red);
-        assert_eq!(stake.name, "Red Stake");
+        assert_eq!(stake.name, "Red");
         assert_eq!(stake.modifiers.blind_score_multiplier, 1.0);
     }
 

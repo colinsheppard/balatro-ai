@@ -36,15 +36,12 @@ fi
 
 echo "Extension module built at: ${BUILD_PATH}"
 
-# Create a symlink or copy to the test directory for easy import
-TEST_DIR="${SCRIPT_DIR}/tests"
-if [ -d "${TEST_DIR}" ]; then
-    # Copy the extension to the tests directory for easier testing
-    cp "${BUILD_PATH}" "${TEST_DIR}/balatro_engine.so" 2>/dev/null || \
-    cp "${BUILD_PATH}" "${TEST_DIR}/balatro_engine.dylib" 2>/dev/null || \
-    cp "${BUILD_PATH}" "${TEST_DIR}/balatro_engine.dll" 2>/dev/null || true
-    
-    echo "Extension module copied to tests directory"
+# Create a symlink with .so extension for Python compatibility (especially on macOS)
+# Python expects .so extension even on macOS where the actual file is .dylib
+PYTHON_MODULE_PATH="${ENGINE_DIR}/target/release/balatro_engine.so"
+if [ ! -e "${PYTHON_MODULE_PATH}" ]; then
+    ln -sf "${EXTENSION_NAME}" "${PYTHON_MODULE_PATH}"
+    echo "Created symlink: ${PYTHON_MODULE_PATH}"
 fi
 
 echo ""
