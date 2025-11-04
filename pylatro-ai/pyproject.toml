@@ -15,6 +15,7 @@ dependencies = [
     "optuna>=3.0.0",
     "ray[rllib,tune]>=2.8.0",
     "wandb>=0.15.0",
+    "tensorboard>=2.13.0",  # Required for WandB tensorboard syncing
     # Optional: JAX-based simulation (Brax)
     "brax>=0.9.0",
 ]
@@ -30,6 +31,11 @@ dev = [
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Explicitly specify only the actual package to avoid auto-discovery issues
+# with directories like logs/, wandb/, models/ that aren't packages
+packages = ["pylatro_ai"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

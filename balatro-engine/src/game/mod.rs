@@ -25,7 +25,7 @@ pub enum GamePhase {
 // Removed tuple structs - now using primitive types directly
 
 /// Main game state
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GameState {
     pub phase: GamePhase,
     pub ante: u32,
@@ -126,12 +126,11 @@ impl GameState {
 
     /// Draw cards to fill the hand
     pub fn draw_hand(&mut self) -> GameResult<()> {
-        if self.hand.borrow().len() >= self.hand_size {
-            return Err(GameError::InvalidGameState("Hand is already full".to_string()));
-        }
-        let cards: Vec<SharedCard> = self.deck.borrow_mut().draw_multiple(self.hand_size - self.hand.borrow().len())?;
-        for card in cards {
-            self.hand.borrow_mut().add_card(card);
+        if self.hand.borrow().len() < self.hand_size {
+            let cards: Vec<SharedCard> = self.deck.borrow_mut().draw_multiple(self.hand_size - self.hand.borrow().len())?;
+            for card in cards {
+                self.hand.borrow_mut().add_card(card);
+            }
         }
         Ok(())
     }

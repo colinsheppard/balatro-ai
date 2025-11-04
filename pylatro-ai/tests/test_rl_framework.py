@@ -169,7 +169,7 @@ def test_ray_rllib():
         config = PPOConfig()
         config.environment(env="CartPole-v1")
         config.training(lr=0.001)
-        config.rollouts(num_rollout_workers=0)  # Use single worker for testing
+        config.env_runners(num_env_runners=0)  # Use single worker for testing
         
         # Verify config was created
         assert config is not None

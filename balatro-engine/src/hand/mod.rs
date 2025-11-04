@@ -72,7 +72,9 @@ impl Hand {
 
     pub fn discard_selected_cards(&mut self, deck: SharedDeck) -> GameResult<()> {
         if self.selected_indices.is_empty() {
-            return Err(GameError::InvalidGameState("No cards selected to discard".to_string()));
+            return Ok(());
+            //TODO: Make the AI model avoid this 
+            // return Err(GameError::InvalidGameState("No cards selected to discard".to_string()));
         }
         
         // Sort indices in descending order to remove from back to front

@@ -661,10 +661,11 @@ impl PyBalatroEngine {
     }
 
     fn game_state(&self) -> PyResult<PyGameState> {
-        // Note: This creates a new PyGameState wrapper around a reference
-        // For now, we'll need to work with the game_state through the engine
-        // TODO: Consider making GameState Clone or using a different approach
-        Err(PyValueError::new_err("game_state() method not yet implemented - GameState does not implement Clone"))
+        // Clone the game state to create an owned PyGameState
+        let cloned_state = self.engine.game_state().clone();
+        Ok(PyGameState {
+            game_state: cloned_state,
+        })
     }
 
     /// Non-blocking step API for Python-driven control

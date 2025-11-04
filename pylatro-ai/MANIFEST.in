@@ -1,0 +1,14 @@
+# Include only the package files
+include README.md
+include LICENSE
+recursive-include pylatro_ai *.py
+
+# Exclude non-package directories
+global-exclude logs/*
+global-exclude wandb/*
+global-exclude models/*
+global-exclude __pycache__/*
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.egg-info/*
+
