@@ -326,7 +326,7 @@ mod tests {
         let stake = Stake::new(StakeLevel::Red);
         
         assert_eq!(stake.level, StakeLevel::Red);
-        assert_eq!(stake.name, "Red");
+        assert_eq!(stake.name, "Red Stake");
         assert_eq!(stake.modifiers.blind_score_multiplier, 1.0);
     }
 

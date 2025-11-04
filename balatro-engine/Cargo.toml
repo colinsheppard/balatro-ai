@@ -53,3 +53,10 @@ pyo3-build-config = { version = "0.21", optional = true }
 
 [dev-dependencies]
 criterion = "0.5"
+
+[profile.dev]
+opt-level = 0
+debug = "full"
+debug-assertions = true
+overflow-checks = true
+strip = "none"
