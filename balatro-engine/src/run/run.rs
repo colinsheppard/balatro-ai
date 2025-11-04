@@ -22,6 +22,8 @@ pub fn run_game_loop(engine: &mut BalatroEngine) -> Result<bool, Box<dyn std::er
             }
             GamePhase::ShopPackSelection => {
                 // TODO: Handle pack selection
+                // For now, transition to Shop phase to prevent infinite loop
+                engine.game_state_mut().phase = GamePhase::Shop;
             }
             GamePhase::BlindSelect => {
                 handle_blind_select_phase(engine)?;
