@@ -12,6 +12,8 @@ This script:
 import os
 import sys
 import argparse
+import random
+import numpy as np
 from pathlib import Path
 from typing import Optional
 
@@ -77,12 +79,15 @@ class SafeWandbCallback(BaseCallback):
 
 def create_env(seed=None):
     """Create a single Balatro environment."""
-    return BalatroEnv(seed=seed,quiet=True)
+    # If seed is None, generate a random one for this environment
+    if seed is None:
+        seed = random.randint(0, 2**31 - 1)
+    return BalatroEnv(seed=seed, quiet=True)
 
 
 def train(
     total_timesteps: int = 100000,
-    seed: int = 42,
+    seed: Optional[int] = None,
     use_wandb: bool = True,
     log_dir: str = "./logs/balatro_ppo",
     save_dir: str = "./models/balatro_ppo",
@@ -94,13 +99,20 @@ def train(
     
     Args:
         total_timesteps: Total number of training timesteps (target, will train remaining if resuming)
-        seed: Random seed for reproducibility
+        seed: Random seed for reproducibility (None = use pseudo-random seed)
         use_wandb: Whether to use Weights & Biases for logging
         log_dir: Directory for logs
         save_dir: Directory for saved models
         resume_from: Path to checkpoint file to resume from (e.g., ./models/balatro_ppo/ppo_balatro_100000_steps.zip)
         n_envs: Number of parallel environments to run (default: 4, use 4-8 for 8-core systems)
     """
+    # Generate random seed if not provided
+    if seed is None:
+        seed = random.randint(0, 2**31 - 1)
+        print(f"Using pseudo-random seed: {seed}")
+    else:
+        print(f"Using fixed seed: {seed}")
+    
     # Create directories
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(save_dir, exist_ok=True)
@@ -144,7 +156,7 @@ def train(
                 name="single-blind-training",
                 config={
                     "total_timesteps": total_timesteps,
-                    "seed": seed,
+                    "seed": seed,  # seed is guaranteed to be an int at this point
                     "algorithm": "PPO",
                     "env": "BalatroEnv",
                     "n_envs": n_envs,
@@ -230,7 +242,7 @@ def train(
     
     # Checkpoint callback
     checkpoint_callback = CheckpointCallback(
-        save_freq=10e3,
+        save_freq=100e3,
         save_path=save_dir,
         name_prefix="ppo_balatro",
     )
@@ -242,7 +254,7 @@ def train(
             # Increase logging frequency intervals to reduce connection pressure
             # This reduces the number of socket writes and connection attempts
             wandb_callback = WandbCallback(
-                gradient_save_freq=10e3,  # Increased from 1000 - save gradients less frequently
+                gradient_save_freq=100e3,  # Increased from 1000 - save gradients less frequently
                 model_save_path=save_dir,
                 verbose=1,  # Reduced verbosity
                 log="all",  # Log all metrics but less frequently
@@ -295,8 +307,8 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
-        help="Random seed (default: 42)",
+        default=None,
+        help="Random seed (default: None = use pseudo-random)",
     )
     parser.add_argument(
         "--no-wandb",

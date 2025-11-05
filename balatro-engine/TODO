@@ -1,6 +1,5 @@
 
 TODO:
 
-* Detect straight needs to allow Ace low
-* Verify through play that hand detection and scoring operates as expected
-* Move on the joker effect system, start with simplest chip and mult effects
+* It may be important for the "Select ..." and "Move ..." actions to have the Card info in python.
+* Need to research how the actions are fed into the model, the structure of that model etc.
